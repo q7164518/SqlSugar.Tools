@@ -1,0 +1,99 @@
+﻿html {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Chrome/Safari/Opera */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently*/
+    background: #EFF1F4;
+}
+@keyframes dialog-fade-in {
+  0% {
+    transform: scale3d(.3,.3,.3);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale3d(1);
+    opacity: 1;
+  }
+}
+@keyframes dialog-fade-out {
+  0% {
+    transform: scale3d(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale3d(.3,.3,.3);
+    opacity: 0;
+  }
+}
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 5px solid transparent;
+}
+
+::-webkit-scrollbar-track {
+  box-shadow: 1px 1px 5px rgba(0,0,0,.2) inset;
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 20px;
+  background-clip: content-box;
+  box-shadow: 0 0 0 5px rgba(0,0,0,.2) inset;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+#app {
+    margin: 10px 10px 10px 45px
+}
+.icon{display:inline-block;width:30px;height:30px;}
+.icon-min:before{content:url(../svg/min-btn.svg)}
+.icon-max:before{content:url(../svg/max-btn.svg)}
+.icon-close:before{content:url(../svg/close-btn.svg)}
+
+body{margin:0;padding:0;height:100%;width:100%}
+#tool {
+    position: fixed;
+    z-index: 2;
+    width: 40px;
+    height: 100%;
+    left: 0;
+    top: 0;
+    background: #2E3238;
+    border-right: 1px solid #1883D7
+}
+#tool .tool-btn{
+    position:absolute;
+    left:4px;
+    right:0;
+    margin:auto
+}
+#td {
+    position: fixed;
+    z-index: 3;
+    width: 40px;
+    height: 100%;
+    left: 0;
+    top: 150px;
+    background: #2E3238;
+    -webkit-app-region: drag;
+}
+.left-title {
+    -webkit-app-region: drag;
+    writing-mode: vertical-lr;
+    color: #FFF;
+    position: fixed;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}

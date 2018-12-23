@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" style="background:#2E3238">
+<head>
+    <meta charset="utf-8" />
+    <title>Create Entity</title>
+    <link href="../css/element.css" rel="stylesheet" />
+    <link href="../css/base.css" rel="stylesheet" />
+    <link href="../css/highlight/tomorrow-night-eighties.css" rel="stylesheet" />
+    <link href="../css/CreateEntity.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app" @keyup.ctrl.83="saveOneCode" style="margin:0 0 0px 40px;" v-loading.fullscreen.lock="loading" element-loading-background="rgba(0, 0, 0, 0.5)">
+        <div id="tool">
+            <el-tooltip class="item" effect="dark" content="退出程序" placement="right">
+                <el-button onclick="exit()" style="top:10px" class="tool-btn" icon="el-icon-close" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最大化" placement="right">
+                <el-button n-ui-command="maximize" style="top:60px" class="tool-btn" icon="el-icon-plus" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最小化" placement="right">
+                <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
+            </el-tooltip>
+        </div>
+        <div id="td">
+            <p class="left-title" style="height:100px">生 成 实 体 类</p>
+        </div>
+        <el-menu :default-active="activeIndex"
+                 @select="handleSelect"
+                 style="height:50px;"
+                 mode="horizontal"
+                 background-color="#2E3238"
+                 text-color="#FFF"
+                 active-text-color="#42CAC7"
+                 class="dbNav">
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 1, 'dbTypeItemThis' : activeIndex == 1 }" index="1">
+                <img src="../svg/mssql.svg" style="transform:scale(.7)" />SQL Server
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 2, 'dbTypeItemThis' : activeIndex == 2 }" index="2">
+                <img src="../svg/mysql.svg" style="transform:scale(.7)" />MySql
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 3, 'dbTypeItemThis' : activeIndex == 3 }" index="3">
+                <img src="../svg/Oracle.svg" style="transform:scale(.7)" />Oracle
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 4, 'dbTypeItemThis' : activeIndex == 4 }" index="4">
+                <img src="../svg/postgresql.svg" style="transform:scale(.7)" />PostgreSQL
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 5, 'dbTypeItemThis' : activeIndex == 5 }" index="5">
+                <img src="../svg/sqlite.svg" style="transform:scale(.7)" />SQLite
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 6, 'dbTypeItemThis' : activeIndex == 6 }" index="6">
+                <img src="../svg/settings.svg" style="transform:scale(.6)" />生成模版设置
+            </el-menu-item>
+            <el-menu-item :class="{ 'dbTypeItem' : activeIndex != 7, 'dbTypeItemThis' : activeIndex == 7 }" index="7">
+                <img src="../svg/manager.svg" style="transform:scale(1)" />管理数据库连接
+            </el-menu-item>
+        </el-menu>
+        <div style="width:100%;height:50px;"></div>
+        <div class="dbList">
+            <el-input placeholder="输入表名搜索(模糊)" v-model="filterText" style="width:15vw;min-width:200px;position:fixed;z-index:1" class="search"></el-input>
+            <el-tree style="padding-top:40px;" ref="tree" class="dbList" :data="dbData" :props="defaultProps" :render-content="renderContent" :filter-node-method="filterNode"></el-tree>
+        </div>
+
+        <div class="code" id="editor" spellcheck="false">
+            <pre><code id="code" style="font-family:code"></code></pre>
+        </div>
+
+        <!--模版设置    start-->
+        <el-dialog width="1000px" top="10px" title="生成模版设置" :visible.sync="showSettingsDialog" :close-on-click-modal="false">
+            <el-form ref="settingsForm" :model="settingsForm" label-width="180px">
+                <el-form-item label="导入的命名空间 : ">
+                    <el-tooltip class="item" effect="dark" content="在这里输入的命名空间都会在实体类导入, 如输入 using System;" placement="top">
+                        <el-input type="textarea" :rows="3" v-model="settingsForm.namespace" placeholder="请输入要导入的命名空间"></el-input>
+                    </el-tooltip>
+                </el-form-item>
+                <el-form-item label="实体类命名空间 : ">
+                    <el-col :span="10">
+                        <el-tooltip class="item" effect="dark" content="在这里输入的是实体类所在的命名空间, 如输入 Entitys, 实体类就在Entitys命名空间下" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.entityNamespace" placeholder="请输入实体类命名空间"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="14">
+                        <label class="el-form-item__label" style="width:150px;">继承父类: </label>
+                        <el-tooltip class="item" effect="dark" content="在这里输入的是实体类所要继承的父类, 实体类不需要继承某个父类, 则无需输入" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.baseClassName" placeholder="请输入需要继承的父类"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                </el-form-item>
+                <el-form-item label="get自定义格式 : ">
+                    <el-col :span="10">
+                        <el-tooltip class="item" effect="dark" content="可以在get中插入自定义代码. 请务必至少输入 [return this._属性;] 否则get没有返回. 有个 [_属性] 占位符" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.getCus" placeholder="请输入get格式"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="14">
+                        <label class="el-form-item__label" style="width:150px;">set自定义格式: </label>
+                        <el-tooltip class="item" effect="dark" content="可以在set中插入自定义代码. 请务必至少输入 [this._属性 = -value-;] 否则set没有赋值. 有 [_属性 和 -value-]两个占位符" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.setCus" placeholder="请输入get格式"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                </el-form-item>
+                <el-form-item label="自定义实体类特性 : ">
+                    <el-col :span="10">
+                        <el-tooltip class="item" effect="dark" content="会放在实体类上面的特性, 如[Serializable]" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.cusAttr" placeholder="请输入实体类特性"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="14">
+                        <label class="el-form-item__label" style="width:150px;">自定义构造函数 : </label>
+                        <el-tooltip class="item" effect="dark" content="可以自定义实体类构造函数, 有个 [-tableName-] 的占位符, 表示取值当前的表名" placement="top">
+                            <el-input style="width:305px" v-model="settingsForm.cusGouZao" placeholder="请输入自定义构造函数代码"></el-input>
+                        </el-tooltip>
+                    </el-col>
+                </el-form-item>
+                <el-form-item label="实体类名大写字母个数 : ">
+                    <el-col :span="10">
+                        <el-tooltip class="item" effect="dark" content="0表示数据库默认名字, 如输入1, 不管数据库表名首字母是不是大写, 生成的实体类都会大写1个" placement="top">
+                            <el-input-number style="width:305px" :min="0" v-model="settingsForm.classCapsCount" :step="1"></el-input-number>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="14">
+                        <label class="el-form-item__label" style="width:150px;">属性名大写字母个数 : </label>
+                        <el-tooltip class="item" effect="dark" content="0表示数据库默认名字, 如输入1, 不管数据库列名首字母是不是大写, 生成的实体类属性名都会大写1个" placement="top">
+                            <el-input-number style="width:305px" :min="0" v-model="settingsForm.propCapsCount" :step="1"></el-input-number>
+                        </el-tooltip>
+                    </el-col>
+                </el-form-item>
+                <el-form-item label="">
+                    <el-col :span="6">
+                        <el-tooltip class="item" effect="dark" content="本质就是在属性的set中调用Trim()方法" placement="top">
+                            <el-checkbox v-model="settingsForm.propTrim">String属性去除首尾空格</el-checkbox>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="7">
+                        <el-tooltip class="item" effect="dark" content="如bool?为null的时候, set的时候会变成False" placement="top">
+                            <el-checkbox v-model="settingsForm.propDefault">值类型属性为Null返回默认值</el-checkbox>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-tooltip class="item" effect="dark" content="在主键属性上增加[SugarColumn(IsPrimaryKey = true)]" placement="top">
+                            <el-checkbox v-model="settingsForm.sqlSugarPK">SqlSugar标识主键</el-checkbox>
+                        </el-tooltip>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-tooltip class="item" effect="dark" content="在自增列键属性上增加[SugarColumn(IsIdentity = true)]" placement="top">
+                            <el-checkbox v-model="settingsForm.sqlSugarBZL">SqlSugar标识自增列</el-checkbox>
+                        </el-tooltip>
+                    </el-col>
+                </el-form-item>
+                <el-form-item label="实体类属性模式 : ">
+                    <el-tooltip class="item" effect="dark" content="简易模式无法使用get和set自定义模版" placement="top">
+                        <el-radio v-model="settingsForm.propType" label="0">简易模式</el-radio>
+                    </el-tooltip>
+                    <el-radio v-model="settingsForm.propType" label="1">模版模式</el-radio>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-close" @click="showSettingsDialog = false" type="info">取 消</el-button>
+                <el-button size="small" icon="el-icon-check" @click="settingsSave" type="success">保 存</el-button>
+            </div>
+        </el-dialog>
+        <!--模版设置      end-->
+        <!--SQL Server连接框-->
+        <el-dialog width="600px" top="80px" title="添加SQL Server连接" :visible.sync="showSQLServerDialog" :close-on-click-modal="false" @closed="SQLServerDialogClosed">
+            <el-form ref="SQLServerForm" :model="SQLServerForm" label-width="100px" :rules="SQLServerFormRules">
+                <el-form-item label="连接名称: " prop="name">
+                    <el-input v-model="SQLServerForm.name" placeholder="请输入连接名称"></el-input>
+                </el-form-item>
+                <el-form-item label="主机地址: " prop="host">
+                    <el-input v-model="SQLServerForm.host" placeholder="请输入主机地址"></el-input>
+                </el-form-item>
+                <el-form-item label="验证方式: ">
+                    <el-select v-model="SQLServerForm.linkType" placeholder="请选择验证方式" style="width:100%">
+                        <el-option label="Windows身份验证" value="win"></el-option>
+                        <el-option label="SQL Server身份验证" value="db"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="数据库用户名: " prop="account">
+                    <el-input v-model="SQLServerForm.account" placeholder="请输入数据库用户名" :disabled="SQLServerForm.linkType === 'win'"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库密码: " prop="pwd">
+                    <el-input v-model="SQLServerForm.pwd" placeholder="请输入数据库密码" :disabled="SQLServerForm.linkType === 'win'"></el-input>
+                </el-form-item>
+                <el-form-item label="选择数据库: ">
+                    <el-select v-model="SQLServerForm.db" placeholder="请选择数据库" style="width:100%">
+                        <el-option v-for="(item, index) in dbList" :label="item.name" :value="item.name" :key="index"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testSQLServerLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-check" type="success" @click="selectDB">确 定</el-button>
+                <el-button size="small" icon="el-icon-close" @click="showSQLServerDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--SQL Server连接框-->
+        <!--SQLite连接框-->
+        <el-dialog width="600px" top="80px" title="添加SQLite连接" :visible.sync="showSQLiteDialog" :close-on-click-modal="false" @closed="SQLiteDialogClosed">
+            <el-form ref="SQLiteForm" :model="SQLiteForm" label-width="100px" :rules="SQLiteFormRules">
+                <el-form-item label="连接名称: " prop="name">
+                    <el-input v-model="SQLiteForm.name" placeholder="请输入连接名称"></el-input>
+                </el-form-item>
+                <el-form-item label="数据文件: " prop="host">
+                    <el-input v-model="SQLiteForm.host" placeholder="请输入DB文件地址或选择文件">
+                        <el-button slot="append" icon="el-icon-setting" @click="selectDBFile">选择DB文件</el-button>
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="数据库密码: ">
+                    <el-input v-model="SQLiteForm.pwd" placeholder="请输入数据库密码, 没有密码则不写"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testSQLiteLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-check" type="success" @click="selectSQLiteDB">确 定</el-button>
+                <el-button size="small" icon="el-icon-close" @click="showSQLiteDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--SQLite连接框-->
+        <!--mysql连接框-->
+        <el-dialog width="600px" top="80px" title="添加MySql连接" :visible.sync="showMySqlDialog" :close-on-click-modal="false" @closed="mySqlDialogClosed">
+            <el-form ref="MySqlForm" :model="MySqlForm" label-width="120px" :rules="MySqlFormRules">
+                <el-form-item label="连接名称: " prop="name">
+                    <el-input v-model="MySqlForm.name" placeholder="请输入连接名称"></el-input>
+                </el-form-item>
+                <el-form-item label="主机地址: " prop="host">
+                    <el-input v-model="MySqlForm.host" placeholder="请输入主机地址"></el-input>
+                </el-form-item>
+                <el-form-item label="端口号: " prop="port">
+                    <el-input v-model="MySqlForm.port" placeholder="请输入端口号"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库用户名: " prop="account">
+                    <el-input v-model="MySqlForm.account" placeholder="请输入数据库用户名"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库密码: " prop="pwd">
+                    <el-input v-model="MySqlForm.pwd" placeholder="请输入数据库密码"></el-input>
+                </el-form-item>
+                <el-form-item label="选择数据库: ">
+                    <el-select v-model="MySqlForm.db" placeholder="请选择数据库" style="width:100%">
+                        <el-option v-for="(item, index) in dbList" :label="item.name" :value="item.name" :key="index"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testMySqlLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-check" type="success" @click="selectMySqlDB">确 定</el-button>
+                <el-button size="small" icon="el-icon-close" @click="showMySqlDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--mysql连接框-->
+        <!--postregsql连接框-->
+        <el-dialog width="600px" top="80px" title="添加PostregSQL连接" :visible.sync="showPGSqlDialog" :close-on-click-modal="false" @closed="PGSqlDialogClosed">
+            <el-form ref="PGSqlForm" :model="PGSqlForm" label-width="120px" :rules="PGSqlFormRules">
+                <el-form-item label="连接名称: " prop="name">
+                    <el-input v-model="PGSqlForm.name" placeholder="请输入连接名称"></el-input>
+                </el-form-item>
+                <el-form-item label="主机地址: " prop="host">
+                    <el-input v-model="PGSqlForm.host" placeholder="请输入主机地址"></el-input>
+                </el-form-item>
+                <el-form-item label="端口号: " prop="port">
+                    <el-input v-model="PGSqlForm.port" placeholder="请输入端口号"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库用户名: " prop="account">
+                    <el-input v-model="PGSqlForm.account" placeholder="请输入数据库用户名"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库密码: " prop="pwd">
+                    <el-input v-model="PGSqlForm.pwd" placeholder="请输入数据库密码"></el-input>
+                </el-form-item>
+                <el-form-item label="连接数据库: " prop="db">
+                    <el-input v-model="PGSqlForm.db" placeholder="请输入要连接的数据库"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testPGSqlLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-check" type="success" @click="selectPGSqlDB">确 定</el-button>
+                <el-button size="small" icon="el-icon-close" @click="showPGSqlDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--postregsql连接框-->
+    </div>
+</body>
+</html>
+<script src="../js/highlight.pack.js"></script>
+<script type="text/javascript">
+    hljs.initHighlightingOnLoad();
+</script>
+<script src="../js/wangEditor.min.js"></script>
+<script type="text/javascript">
+    var E = window.wangEditor;
+    var editor = new E('#editor');
+    // 或者 var editor = new E( document.getElementById('editor') )
+    editor.create();
+</script>
+<script src="../js/vue.js"></script>
+<script src="../js/element.js"></script>
+<script src="../js/CreateEntity.js"></script>

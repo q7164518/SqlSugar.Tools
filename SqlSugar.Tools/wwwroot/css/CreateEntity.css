@@ -1,0 +1,80 @@
+﻿@font-face {
+    font-family: 'code';
+    src: url('fonts/MONACO.TTF') format('truetype');
+}
+.dbTypeItem {
+    transition:.6s;
+    height: 50px !important;
+    line-height: 50px !important;
+    border-bottom:0 !important;
+}
+.dbTypeItemThis {
+    transition: .6s;
+    height: 50px !important;
+    line-height: 50px !important;
+    border-bottom: 0 !important;
+    background: #272A2F !important
+}
+.dbNav {
+    position: fixed;
+    top: 0;
+    left: 41px;
+    width: 100%;
+    z-index: 2;
+    border-bottom: 1px solid #1883D7 !important;
+}
+.code {
+    display: inline-block;
+    float: left;
+    position: fixed;
+    width: calc(100% - 15vw - 40px);
+    height: calc(100% - 25px) !important;
+    font-size: 16px;
+    overflow-x: scroll;
+    background: #292929
+}
+.w-e-text-container {
+    height: calc(100% - 25px) !important;
+}
+.w-e-toolbar{
+    display:none !important;
+}
+.w-e-text code {
+    background: #292929 !important
+}
+.el-menu{
+   border-right:none !important;
+}
+.w-e-text-container{
+    border:none !important;
+}
+.dbList {
+    width: 15vw;
+    min-width: 200px;
+    white-space: unset;
+    overflow: hidden;
+    display: inline-block;
+    float: left;
+    background: #2E3238;
+    color:#fff;
+}
+.el-tree-node__content:hover {
+    background: #272A2F !important;
+}
+.el-tree-node:focus > .el-tree-node__content {
+    background-color: #272A2F !important;
+}
+.el-tree-node__content {
+    height: 40px;
+}
+.is-current {
+    background: #272A2F !important;
+    color: #42CAC7 !important;
+}
+.search > input {
+    background: #272A2F;
+    border: 0 !important;
+    color: #42CAC7;
+    border-bottom: 1px solid #1883D7 !important;
+    border-radius:0 !important;
+}

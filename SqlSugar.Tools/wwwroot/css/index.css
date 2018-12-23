@@ -1,0 +1,108 @@
+﻿.transition-box {
+    -webkit-box-sizing: border-box;
+    background-color: #409eff;
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #fff;
+    height: 100px;
+    margin-bottom: 10px;
+    margin-right: 20px;
+    padding: 40px 20px;
+    text-align: center;
+    width: 200px
+}
+
+.dashboard-container{
+    margin: 30px
+}
+
+.dashboard-text {
+    font-size: 30px;
+    line-height: 46px
+}
+
+.panel-group {
+    margin-top: 18px
+}
+
+.panel-group .card-panel-col{
+    margin-bottom: 32px
+}
+
+.panel-group .card-panel {
+    -webkit-box-shadow: 4px 4px 40px rgba(0,0,0,.05);
+    background: #fff;
+    border-color: rgba(0,0,0,.05);
+    box-shadow: 4px 4px 40px rgba(0,0,0,.05);
+    color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    height: 108px;
+    overflow: hidden;
+    position: relative
+}
+
+.panel-group .card-panel:hover .card-panel-icon-wrapper {
+    color: #fff
+}
+
+.panel-group .card-panel:hover .icon-people {
+    background: #2E3238
+}
+
+.panel-group .card-panel .icon-people {
+    color: #40c9c6
+}
+
+.panel-group .card-panel .icon-message {
+    color: #36a3f7
+}
+
+.panel-group .card-panel .icon-money {
+    color: #f4516c
+}
+
+.panel-group .card-panel .icon-shoppingCard {
+    color: #34bfa3
+}
+
+.panel-group .card-panel .card-panel-icon-wrapper {
+    -webkit-transition: all .38s ease-out;
+    border-radius: 6px;
+    float: left;
+    margin: 14px 0 0 14px;
+    padding: 16px;
+    transition: all .6s ease-out
+}
+
+.panel-group .card-panel .card-panel-icon {
+    float: left;
+    font-size: 48px
+}
+
+.panel-group .card-panel .card-panel-description {
+    float: right;
+    font-weight: 700;
+    margin: 26px 26px 26px 0;
+    text-align:right
+}
+
+.panel-group .card-panel .card-panel-description .card-panel-text {
+    color: rgba(0,0,0,.45);
+    font-size: 16px;
+    line-height: 18px;
+    margin-bottom: 12px
+}
+
+.panel-group .card-panel .card-panel-description .card-panel-num {
+    font-size: 20px
+}
+#qq{
+    position:fixed;
+    width:100%;
+    bottom:10px;
+    left:45px;
+}
+#qq .qqTag{
+    cursor:pointer
+}

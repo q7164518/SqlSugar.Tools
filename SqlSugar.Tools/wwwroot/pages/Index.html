@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>SqlSugar ORM Tools</title>
+    <link href="../css/element.css" rel="stylesheet" />
+    <link href="../css/base.css" rel="stylesheet" />
+    <link href="../css/index.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app">
+        <div id="tool">
+            <el-tooltip class="item" effect="dark" content="退出程序" placement="right">
+                <el-button onclick="exit()" style="top:10px" class="tool-btn" icon="el-icon-close" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最大化" placement="right">
+                <el-button n-ui-command="maximize" style="top:60px" class="tool-btn" icon="el-icon-plus" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最小化" placement="right">
+                <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
+            </el-tooltip>
+        </div>
+        <div id="td"></div>
+        <h1 style="text-align:center;color:#444;font-family:微软雅黑">SQL Sugar ORM 工具箱</h1>
+        <el-row :gutter="20" class="panel-group">
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="toWord()">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/word.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">SQL Sugar ORM开发文档</div>
+                        <span>目前先暂时用官网的文档, 等后期整理离线文档</span>
+                    </div>
+                </div>
+            </el-col>
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="showCreateEntity()">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/entity.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">实体类生成</div>
+                        <span>SQL Sugar ORM</span>
+                    </div>
+                </div>
+            </el-col>
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="toHome()">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/homeweb.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">浏览官网</div>
+                        <span>SQL Sugar ORM</span>
+                    </div>
+                </div>
+            </el-col>
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="toGithub()">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/github.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">Github给个Star</div>
+                        <span>SQL Sugar ORM</span>
+                    </div>
+                </div>
+            </el-col>
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/settings.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">设置</div>
+                        <span>SQL Sugar ORM</span>
+                    </div>
+                </div>
+            </el-col>
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col">
+                <div class="card-panel">
+                    <div class="card-panel-icon-wrapper icon-people">
+                        <svg class="" style="width:35px;height:35px;">
+                            <image xlink:href="../svg/aboutus.svg" width="35px" height="35px"></image>
+                        </svg>
+                    </div>
+                    <div class="card-panel-description">
+                        <div class="card-panel-text">关于</div>
+                        <span>SQL Sugar ORM</span>
+                    </div>
+                </div>
+            </el-col>
+        </el-row>
+        <div id="qq">
+            <h3 style="color:#444">交流QQ群<span style="font-size:12px;font-weight:500;color:#666;padding-left:10px;">单击即可添加群</span></h3>
+            <el-tag class="qqTag" type="danger" onclick="qq.addedQun('http://shang.qq.com/wpa/qunwpa?idkey=428ff6cca697f2e401944eff2ddb5e150289bc0eb0f441f0d09dd7a5395fa411')">一群: 225982985</el-tag>
+            <el-tag class="qqTag" type="danger" onclick="qq.addedQun('http://shang.qq.com/wpa/qunwpa?idkey=e68413f2d34bff2110aa339632c21f0bd9399ea18e92ffe64f58b7a138cde8a0')">二群: 726648662</el-tag>
+            <el-tag class="qqTag" type="danger" onclick="qq.addedQun('http://shang.qq.com/wpa/qunwpa?idkey=9f67b12250f496ca92e8615faeed11bd79fd8163ff51e03f002cd79561af3b27')">三群: 654015377</el-tag>
+            <p style="font-size:12px;color:#666">请不要重复申请入群, 添加一个群即可, 留下位置给更多需要的人. </p>
+        </div>
+    </div>
+</body>
+</html>
+<script src="../js/vue.js"></script>
+<script src="../js/element.js"></script>
+<script src="../js/index.js"></script>
