@@ -967,7 +967,9 @@ namespace SqlSugar.Tools
             switch (type)
             {
                 case DataBaseType.SQLServer:
-                    var sql = @"select * from
+                    var sql = @"select name as TableName, '' as TableDesc  From SysObjects Where xtype='V'
+union all
+select * from
 (SELECT 
     TableName       = case when a.colorder=1 then d.name else '' end,
     TableDesc     = case when a.colorder=1 then isnull(f.value,'') else '' end
@@ -977,12 +979,12 @@ inner join
     sysobjects d 
 on 
     a.id=d.id  and d.xtype='U' and  d.name<>'dtproperties'
-left join
+inner join
 sys.extended_properties f
-on
+on 
     d.id=f.major_id and f.minor_id=0) t
 	where t.TableName!=''
-    order by TableName ASC";
+	order by TableName ASC";
                     return await SQLServerHelper.QueryDataTable(linkString, sql);
                 case DataBaseType.MySQL:
                     var database = linkString.Substring(linkString.IndexOf("Database=") + 9, linkString.IndexOf(";port=") - linkString.IndexOf("Database=") - 9);
