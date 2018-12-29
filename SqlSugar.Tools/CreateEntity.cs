@@ -96,7 +96,7 @@ namespace SqlSugar.Tools
                     {
                         var tables = await this.LoadingTables(linkString, DataBaseType.SQLServer);
                         tables.Columns["TableName"].ColumnName = "label";
-                        var tablesJson = JsonConvert.SerializeObject(tables);
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -544,7 +544,7 @@ namespace SqlSugar.Tools
                     {
                         var tables = await this.LoadingTables(linkString, DataBaseType.MySQL);
                         tables.Columns["TableName"].ColumnName = "label";
-                        var tablesJson = JsonConvert.SerializeObject(tables);
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -758,7 +758,7 @@ namespace SqlSugar.Tools
                         var tables = await this.LoadingTables(linkString, DataBaseType.PostgreSQL);
                         tables.Columns["TableName"].ColumnName = "label";
                         tables.Columns["tabledesc"].ColumnName = "TableDesc";
-                        var tablesJson = JsonConvert.SerializeObject(tables);
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -967,7 +967,7 @@ namespace SqlSugar.Tools
             switch (type)
             {
                 case DataBaseType.SQLServer:
-                    var sql = @"select name as TableName, '' as TableDesc  From SysObjects Where xtype='V'
+                    var sql = @"select name as TableName, '' as TableDesc  From SysObjects Where xtype='V' or xtype = 'U'
 union all
 select * from
 (SELECT 
