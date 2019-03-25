@@ -967,7 +967,7 @@ namespace SqlSugar.Tools
             switch (type)
             {
                 case DataBaseType.SQLServer:
-                    var sql = @"select name as TableName, '' as TableDesc  From SysObjects Where xtype='V' or xtype = 'U'
+                    var sql = @"select name as TableName, '' as TableDesc  From SysObjects Where xtype='V'
 union all
 select * from
 (SELECT 
