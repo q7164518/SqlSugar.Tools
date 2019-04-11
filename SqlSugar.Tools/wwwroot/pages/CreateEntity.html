@@ -187,7 +187,7 @@
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button size="small" icon="el-icon-setting" type="warning" @click="testSQLServerLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testSQLServerLink">测试连接(加载数据库)</el-button>
                 <el-button size="small" icon="el-icon-check" type="success" @click="selectDB">确 定</el-button>
                 <el-button size="small" icon="el-icon-close" @click="showSQLServerDialog = false" type="info">关 闭</el-button>
             </div>
@@ -240,7 +240,7 @@
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button size="small" icon="el-icon-setting" type="warning" @click="testMySqlLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testMySqlLink">测试连接(加载数据库)</el-button>
                 <el-button size="small" icon="el-icon-check" type="success" @click="selectMySqlDB">确 定</el-button>
                 <el-button size="small" icon="el-icon-close" @click="showMySqlDialog = false" type="info">关 闭</el-button>
             </div>
@@ -275,6 +275,27 @@
             </div>
         </el-dialog>
         <!--postregsql连接框-->
+        <!--管理数据库连接-->
+        <el-dialog width="600px" top="80px" title="管理数据库连接" :visible.sync="showManagerDialog" :close-on-click-modal="false">
+            <el-table :data="dbData" stripe style="width:100%" border height="380px">
+                <el-table-column type="index" width="50"></el-table-column>
+                <el-table-column prop="label" label="连接名称" min-width="200" show-overflow-tooltip></el-table-column>
+                <el-table-column fixed="right" label="操作" width="100">
+                    <template slot-scope="scope">
+                        <el-tooltip class="item" effect="dark" content="编辑此连接" placement="left">
+                            <el-button type="primary" icon="el-icon-edit" circle size="small" @click="editDB(scope.$index, scope.row.label)"></el-button>
+                        </el-tooltip>
+                        <el-tooltip class="item" effect="dark" content="删除此连接" placement="right">
+                            <el-button type="danger" icon="el-icon-delete" circle size="small" @click="deleteDB(scope.$index, scope.row.label)"></el-button>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-close" @click="showManagerDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--管理数据库连接-->
     </div>
 </body>
 </html>

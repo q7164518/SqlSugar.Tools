@@ -180,7 +180,8 @@ const vue = new Vue({
                 db: [
                     { required: true, message: '请输入要连接的数据库', trigger: 'blur' }
                 ]
-            }
+            },
+            showManagerDialog: false
         };
     },
     watch: {
@@ -205,6 +206,8 @@ const vue = new Vue({
                 this.showMySqlDialog = true;
             } else if (key === "4") {
                 this.showPGSqlDialog = true;
+            } else if (key === "7") {
+                this.showManagerDialog = true;
             }
         },
         SQLServerDialogClosed() {
@@ -479,6 +482,44 @@ const vue = new Vue({
                     addedDBData({ label: this.PGSqlForm.name, linkString, children: [], type: 'pgsql' });
                 }
             });
+        },
+        deleteDB(index, name) {
+            this.$confirm(`确定删除名为: [${name}] 的数据库连接吗?`, '删除提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                deleteDBData(index);
+                this.dbData.splice(index, 1);
+                this.$message({
+                    type: 'success',
+                    message: '删除成功!'
+                });
+            }).catch(() => {
+            });
+        },
+        editDB(index, name) {
+            this.$prompt('请输入新的连接名称', `修改 [${name}] 的连接名称`, {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                inputPlaceholder: '请输入新的连接名称哦~',
+                inputValidator: (val) => {
+                    if (!val) {
+                        return '请输入连接名称';
+                    }
+                    return true;
+                }
+            }).then(({ value }) => {
+                let dbData = getDBData();
+                dbData[index].label = value;
+                window.localStorage.setItem('dbDataKey', JSON.stringify(dbData));
+                this.dbData[index].label = value;
+                this.$message({
+                    type: 'success',
+                    message: '编辑成功!'
+                });
+            }).catch(() => {
+            });
         }
     },
     created() {
@@ -507,6 +548,12 @@ const vue = new Vue({
 function addedDBData(dbInfo) {
     let dbData = getDBData();
     dbData.push(dbInfo);
+    window.localStorage.setItem('dbDataKey', JSON.stringify(dbData));
+}
+
+function deleteDBData(index) {
+    let dbData = getDBData();
+    dbData.splice(index, 1);
     window.localStorage.setItem('dbDataKey', JSON.stringify(dbData));
 }
 
