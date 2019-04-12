@@ -275,6 +275,43 @@
             </div>
         </el-dialog>
         <!--postregsql连接框-->
+        <!--Oracle连接框-->
+        <el-dialog width="600px" top="40px" title="添加Oracle连接" :visible.sync="showOracleDialog" :close-on-click-modal="false" @closed="OracleDialogClosed">
+            <el-form ref="OracleForm" :model="OracleForm" label-width="140px" :rules="OracleFormRules">
+                <el-form-item label="连接名称: " prop="name">
+                    <el-input v-model="OracleForm.name" placeholder="请输入连接名称"></el-input>
+                </el-form-item>
+                <el-form-item label="连接方式: ">
+                    <el-select v-model="OracleForm.linkType" placeholder="请选连接方式" style="width:100%">
+                        <el-option label="Basic" value="Basic"></el-option>
+                        <el-option label="TNS" value="TNS"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="端口号: " prop="port" v-if="OracleForm.linkType === 'Basic'">
+                    <el-input v-model="OracleForm.port" placeholder="请输入端口号"></el-input>
+                </el-form-item>
+                <el-form-item label="主机地址: " prop="host">
+                    <el-input v-model="OracleForm.host" placeholder="请输入主机地址"></el-input>
+                </el-form-item>
+                <el-form-item label="Service Name/SID: " prop="SNSID" v-if="OracleForm.linkType === 'Basic'">
+                    <el-input v-model="OracleForm.SNSID" placeholder="请输入Service Name/SID"></el-input><br />
+                    <el-radio v-model="OracleForm.radio" label="Service">Service Name</el-radio>
+                    <el-radio v-model="OracleForm.radio" label="SID">SID</el-radio>
+                </el-form-item>
+                <el-form-item label="数据库用户名: " prop="account">
+                    <el-input v-model="OracleForm.account" placeholder="请输入数据库用户名"></el-input>
+                </el-form-item>
+                <el-form-item label="数据库密码: " prop="pwd">
+                    <el-input v-model="OracleForm.pwd" placeholder="请输入数据库密码"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button size="small" icon="el-icon-setting" type="warning" @click="testOracleLink">测试连接</el-button>
+                <el-button size="small" icon="el-icon-check" type="success" @click="selectOracleDB">确 定</el-button>
+                <el-button size="small" icon="el-icon-close" @click="showOracleDialog = false" type="info">关 闭</el-button>
+            </div>
+        </el-dialog>
+        <!--Oracle连接框-->
         <!--管理数据库连接-->
         <el-dialog width="600px" top="80px" title="管理数据库连接" :visible.sync="showManagerDialog" :close-on-click-modal="false">
             <el-table :data="dbData" stripe style="width:100%" border height="380px">

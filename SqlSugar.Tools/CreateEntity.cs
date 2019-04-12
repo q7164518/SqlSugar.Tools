@@ -39,6 +39,7 @@ namespace SqlSugar.Tools
             this.RegiestSQLiteFunc();
             this.RegiestMySqlFunc();
             this.RegiestPGSqlFunc();
+            this.RegiestOracleFunc();
             base.LoadHandler.OnLoadEnd += LoadHandler_OnLoadEnd;
         }
 
@@ -921,6 +922,220 @@ namespace SqlSugar.Tools
             };
         }
 
+        /// <summary>
+        /// 注册Oracle数据库操作要用到的方法到JS
+        /// </summary>
+        private void RegiestOracleFunc()
+        {
+            var oracle = base.GlobalObject.AddObject("oracle");
+            var testLink = oracle.AddFunction("testLink");    //测试数据库连接
+            testLink.Execute += async (func, args) =>
+            {
+                var linkString = ((args.Arguments.FirstOrDefault(p => p.IsString)?.StringValue) ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(linkString))
+                {
+                    try
+                    {
+                        if (await OracleHelper.TestLink(linkString))
+                        {
+                            EvaluateJavascript("testSuccessMsg()", (value, exception) => { });
+                        }
+                        else
+                        {
+                            MessageBox.Show("测试连接失败", "测试连接Oracle", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "测试连接Oracle", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        EvaluateJavascript("hideLoading()", (value, exception) => { });
+                        GC.Collect();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("获取数据库连接字符串错误", "测试连接Oracle", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                }
+            };
+
+            var loadingTables = oracle.AddFunction("loadingTables");    //加载数据库的表
+            loadingTables.Execute += async (func, args) =>
+            {
+                var linkString = ((args.Arguments.FirstOrDefault(p => p.IsString)?.StringValue) ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(linkString))
+                {
+                    try
+                    {
+                        var tables = await this.LoadingTables(linkString, DataBaseType.Oracler);
+                        tables.Columns["TableName"].ColumnName = "label";
+                        tables.Columns["tabledesc"].ColumnName = "TableDesc";
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        tables.Clear(); tables.Dispose(); tables = null;
+                        EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "加载表", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        EvaluateJavascript("hideLoading()", (value, exception) => { });
+                        GC.Collect();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("获取数据库连接字符串错误", "加载表", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                }
+            };
+
+            var createOne = oracle.AddFunction("createOne");    //生成一个表
+            createOne.Execute += async (func, args) =>
+            {
+                var info = ((args.Arguments.FirstOrDefault(p => p.IsString)?.StringValue) ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(info))
+                {
+                    try
+                    {
+                        var infos = JsonConvert.DeserializeObject<Dictionary<string, string>>(info);
+                        var settings = JsonConvert.DeserializeObject<SettingsModel>(infos["settings"]);
+                        var code = await this.GetEntityCode(infos["linkString"], infos["tableName"], infos["tableDesc"], settings, DataBaseType.Oracler, true);
+                        code = code
+                            .Replace("\r\n", "<br/>")
+                            .Replace("using ", "<span style=\"color:#CE04B0\">using </span>")
+                            .Replace("namespace ", "<span style=\"color:#CE04B0\">namespace </span>")
+                            .Replace("public ", "<span style=\"color:#CE04B0\">public </span>")
+                            .Replace("private ", "<span style=\"color:#CE04B0\">private </span>")
+                            .Replace("class ", "<span style=\"color:#CE04B0\">class </span>")
+                            .Replace("get ", "<span style=\"color:#CE04B0\">get </span>")
+                            .Replace("set ", "<span style=\"color:#CE04B0\">set </span>")
+                            .Replace("get;", "<span style=\"color:#CE04B0\">get;</span>")
+                            .Replace("set;", "<span style=\"color:#CE04B0\">set;</span>")
+                            .Replace("return ", "<span style=\"color:#FF4500\">return </span>")
+                            .Replace("this.", "<span style=\"color:#CE04B0\">this.</span>")
+                            .Replace("SugarColumn", "<span style=\"color:red\">SugarColumn</span>")
+                            .Replace("true", "<span style=\"color:#008B8B\">true</span>")
+                            .Replace("??", "<span style=\"color:#E9D372\">??</span>")
+                            .Replace("?.", "<span style=\"color:#E9D372\">?.</span>")
+                            .Replace("default(", "<span style=\"color:#CE04B0\">default(</span>");
+                        code = Regex.Replace(code, @"/// <summary>(?<str>.*?)/// </summary>", "<span style=\"color:green\">/// &lt;summary&gt;${str}/// &lt;/summary&gt;</span>");
+                        EvaluateJavascript($"getEntityCode('{code}')", (value, exception) => { });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "预览代码", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        EvaluateJavascript("hideLoading()", (value, exception) => { });
+                        GC.Collect();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("获取数据库连接字符串错误", "预览代码", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                }
+            };
+
+            var saveOne = oracle.AddFunction("saveOne"); //保存单个实体类
+            saveOne.Execute += async (func, args) =>
+            {
+                var info = ((args.Arguments.FirstOrDefault(p => p.IsString)?.StringValue) ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(info))
+                {
+                    try
+                    {
+                        var infos = JsonConvert.DeserializeObject<Dictionary<string, string>>(info);
+                        var settings = JsonConvert.DeserializeObject<SettingsModel>(infos["settings"]);
+                        var code = await this.GetEntityCode(infos["linkString"], infos["tableName"], infos["tableDesc"], settings, DataBaseType.Oracler, false);
+                        using (var saveFileDialog = new SaveFileDialog()
+                        {
+                            DefaultExt = "cs",
+                            Filter = "C#类(*.cs)|*.cs",
+                            FileName = $"{(settings.ClassCapsCount > 0 ? infos["tableName"].SetLengthToUpperByStart((int)settings.ClassCapsCount) : infos["tableName"])}.cs",
+                            RestoreDirectory = true,
+                            Title = "保存单个实体类"
+                        })
+                        {
+                            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                var localFilePath = saveFileDialog.FileName.ToString();
+                                using (StreamWriter sw = new StreamWriter(localFilePath, false))
+                                {
+                                    await sw.WriteLineAsync(code);
+                                }
+                                EvaluateJavascript("saveOneSuccess()", (value, exception) => { });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "保存实体类", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        EvaluateJavascript("hideLoading()", (value, exception) => { });
+                        GC.Collect();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("获取数据库连接字符串错误", "保存实体类", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                }
+            };
+
+            var saveAllTables = oracle.AddFunction("saveAllTables"); //保存所有表生成的实体类
+            saveAllTables.Execute += async (func, args) =>
+            {
+                var info = ((args.Arguments.FirstOrDefault(p => p.IsString)?.StringValue) ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(info))
+                {
+                    try
+                    {
+                        var infos = JsonConvert.DeserializeObject<Dictionary<string, string>>(info);
+                        var settings = JsonConvert.DeserializeObject<SettingsModel>(infos["settings"]);
+                        var tableList = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(infos["tableList"]);
+                        using (var folderBrowserDialog = new FolderBrowserDialog())
+                        {
+                            if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                foreach (var item in tableList)
+                                {
+                                    var code = await this.GetEntityCode(infos["linkString"], item["label"], item["TableDesc"], settings, DataBaseType.Oracler, false);
+                                    using (StreamWriter sw = new StreamWriter(folderBrowserDialog.SelectedPath + "\\" + (settings.ClassCapsCount > 0 ? item["label"].SetLengthToUpperByStart((int)settings.ClassCapsCount) : item["label"]) + ".cs"))
+                                    {
+                                        await sw.WriteAsync(code);
+                                    }
+                                }
+                                EvaluateJavascript("saveAllTablesSuccess()", (value, exception) => { });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "保存所有实体类", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        EvaluateJavascript("hideLoading()", (value, exception) => { });
+                        GC.Collect();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("获取数据库连接字符串错误", "保存所有实体类", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                }
+            };
+        }
+
         public static void ShowWindow()
         {
             if (CreateEntity._CreateEntity == null)
@@ -991,7 +1206,8 @@ on
                     var sql1 = $"SELECT TABLE_NAME as TableName, Table_Comment as TableDesc FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = '{database}' order by TableName asc";
                     return await MySQLHelper.QueryDataTable(linkString, sql1);
                 case DataBaseType.Oracler:
-                    return null;
+                    var oracleSql = "select table_name as TableName,comments as tabledesc from user_tab_comments order by table_name asc";
+                    return await OracleHelper.QueryDataTable(linkString, oracleSql);
                 case DataBaseType.SQLite:
                     return await SQLiteHelper.QueryDataTable(linkString, "SELECT name FROM sqlite_master order by name asc");
                 case DataBaseType.PostgreSQL:
@@ -1119,7 +1335,7 @@ ORDER BY
                     isYuLan,
                     codeString);
             }
-            else if (type== DataBaseType.SQLite)
+            else if (type == DataBaseType.SQLite)
             {
                 tableInfo = await SQLiteHelper.QueryTableInfo(linkString, $"select * from '{nodeName}' where 1=2");
                 colsInfos = await SQLiteHelper.QueryDataTable(linkString, $"PRAGMA table_info('{nodeName}')", null);
@@ -1140,7 +1356,7 @@ ORDER BY
                     isYuLan,
                     codeString);
             }
-            else if (type== DataBaseType.PostgreSQL)
+            else if (type == DataBaseType.PostgreSQL)
             {
                 tableInfo = await PostgreSqlHelper.QueryTableInfo(linkString, $"select * from \"{nodeName}\" where 1=2");
                 colsInfos = await PostgreSqlHelper.QueryDataTable(linkString, $@"SELECT
@@ -1159,6 +1375,32 @@ WHERE
                     "objname",
                     "ColumnName",
                     "value",
+                    "IsKey",
+                    "IsAutoIncrement",
+                    "DataType",
+                    "AllowDBNull",
+                    linkString,
+                    nodeName,
+                    nodeDesc,
+                    settings,
+                    isYuLan,
+                    codeString);
+            }
+            else if (type == DataBaseType.Oracler)
+            {
+                tableInfo = await OracleHelper.QueryTableInfo(linkString, $"select * from \"{nodeName}\" where 1=2");
+                tableInfo.Columns.Add("IsAutoIncrement", typeof(bool));
+                for (int i = 0; i < tableInfo.Rows.Count; i++)
+                {
+                    tableInfo.Rows[i]["IsAutoIncrement"] = false;
+                }
+                colsInfos = await OracleHelper.QueryDataTable(linkString, $"select column_name as OBJNAME,comments as VALUE from user_col_comments where table_name = '{nodeName}'", null);
+                this.GetCode(
+                    tableInfo,
+                    colsInfos,
+                    "OBJNAME",
+                    "ColumnName",
+                    "VALUE",
                     "IsKey",
                     "IsAutoIncrement",
                     "DataType",

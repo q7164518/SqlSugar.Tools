@@ -51,6 +51,30 @@ const vue = new Vue({
             }
         };
 
+        const oraclePort = (rule, value, callback) => {
+            if (this.OracleForm.linkType === 'Basic') {
+                if (value === '') {
+                    callback(new Error('请输入端口号'));
+                } else {
+                    callback();
+                }
+            } else {
+                callback();
+            }
+        };
+
+        const SNSID = (rule, value, callback) => {
+            if (this.OracleForm.linkType === 'Basic') {
+                if (value === '') {
+                    callback(new Error('请输入Service Name/SID'));
+                } else {
+                    callback();
+                }
+            } else {
+                callback();
+            }
+        };
+
         return {
             filterText: '',
             showSettingsDialog: false,
@@ -181,7 +205,39 @@ const vue = new Vue({
                     { required: true, message: '请输入要连接的数据库', trigger: 'blur' }
                 ]
             },
-            showManagerDialog: false
+            showManagerDialog: false,
+
+            showOracleDialog: false,
+            OracleForm: {
+                name: '',
+                host: '',
+                port: '1521',
+                linkType: 'Basic',
+                account: '',
+                pwd: '',
+                SNSID: 'ORCL',
+                radio: 'Service'
+            },
+            OracleFormRules: {
+                name: [
+                    { required: true, message: '请输入连接名称', trigger: 'blur' }
+                ],
+                host: [
+                    { required: true, message: '请输入主机地址', trigger: 'blur' }
+                ],
+                port: [
+                    { validator: oraclePort, trigger: 'blur' }
+                ],
+                account: [
+                    { required: true, message: '请输入数据库用户名', trigger: 'blur' }
+                ],
+                pwd: [
+                    { required: true, message: '请输入数据库密码', trigger: 'blur' }
+                ],
+                SNSID: [
+                    { validator: SNSID, trigger: 'blur' }
+                ]
+            }
         };
     },
     watch: {
@@ -208,6 +264,8 @@ const vue = new Vue({
                 this.showPGSqlDialog = true;
             } else if (key === "7") {
                 this.showManagerDialog = true;
+            } else if (key === "3") {
+                this.showOracleDialog = true;
             }
         },
         SQLServerDialogClosed() {
@@ -280,6 +338,8 @@ const vue = new Vue({
                 mysql.loadingTables(dbInfo.linkString);
             } else if (dbInfo.type === 'pgsql') {
                 pgsql.loadingTables(dbInfo.linkString);
+            } else if (dbInfo.type === 'oracle') {
+                oracle.loadingTables(dbInfo.linkString);
             }
         },
         settingsSave() {
@@ -308,6 +368,8 @@ const vue = new Vue({
                 mysql.createOne(info);
             } else if (node.parent.data.type === 'pgsql') {
                 pgsql.createOne(info);
+            } else if (node.parent.data.type === 'oracle') {
+                oracle.createOne(info);
             }
         },
         saveOneCode() {
@@ -330,6 +392,8 @@ const vue = new Vue({
                     mysql.saveOne(info);
                 } else if (this.createOneParam.node.parent.data.type === 'pgsql') {
                     pgsql.saveOne(info);
+                } else if (this.createOneParam.node.parent.data.type === 'oracle') {
+                    oracle.saveOne(info);
                 }
             }
         },
@@ -356,6 +420,8 @@ const vue = new Vue({
                 mysql.saveAllTables(info);
             } else if (node.data.type === 'pgsql') {
                 pgsql.saveAllTables(info);
+            } else if (node.data.type === 'oracle') {
+                oracle.saveAllTables(info);
             }
         },
         SQLiteDialogClosed() {
@@ -519,6 +585,57 @@ const vue = new Vue({
                     message: '编辑成功!'
                 });
             }).catch(() => {
+            });
+        },
+        OracleDialogClosed() {
+            this.$refs['OracleForm'].resetFields();
+            this.OracleForm.radio = 'Service';
+            this.OracleForm.linkType = 'Basic';
+            this.OracleForm.host = '';
+        },
+        testOracleLink() {
+            if (this.OracleForm.linkType === 'TNS') {
+                this.$message({
+                    message: '暂时不支持TNS连接',
+                    type: 'warning'
+                });
+                return;
+            }
+            this.$refs['OracleForm'].validate((valid) => {
+                if (valid) {
+                    this.loading = true;
+                    let itemService = '';
+                    if (this.OracleForm.radio === 'Service') {
+                        itemService = 'SERVICE_NAME';
+                    } else {
+                        itemService = 'SID';
+                    }
+                    let linkString = `Password=${this.OracleForm.pwd};User ID=${this.OracleForm.account};Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=${this.OracleForm.host})(PORT=${this.OracleForm.port})))(CONNECT_DATA=(SERVER=DEDICATED)(${itemService}=${this.OracleForm.SNSID})));`;
+                    oracle.testLink(linkString);
+                }
+            });
+        },
+        selectOracleDB() {
+            if (!this.testIsSuccess) {
+                this.$message({
+                    message: '请先测试连接',
+                    type: 'warning'
+                });
+                return;
+            }
+            this.$refs['OracleForm'].validate((valid) => {
+                if (valid) {
+                    let itemService = '';
+                    if (this.OracleForm.radio === 'Service') {
+                        itemService = 'SERVICE_NAME';
+                    } else {
+                        itemService = 'SID';
+                    }
+                    let linkString = `Password=${this.OracleForm.pwd};User ID=${this.OracleForm.account};Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=${this.OracleForm.host})(PORT=${this.OracleForm.port})))(CONNECT_DATA=(SERVER=DEDICATED)(${itemService}=${this.OracleForm.SNSID})));`;
+                    this.showOracleDialog = false;
+                    this.dbData.push({ label: this.OracleForm.name, linkString, children: [], type: 'oracle' });
+                    addedDBData({ label: this.OracleForm.name, linkString, children: [], type: 'oracle' });
+                }
             });
         }
     },
