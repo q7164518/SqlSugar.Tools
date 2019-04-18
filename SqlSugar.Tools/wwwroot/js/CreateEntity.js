@@ -248,7 +248,7 @@ const vue = new Vue({
     methods: {
         filterNode(value, data) {
             if (!value) return true;
-            return data.label.indexOf(value) !== -1;
+            return data.label.toLowerCase().indexOf(value.toLowerCase()) !== -1;
         },
         handleSelect(key, keyPath) {
             this.activeIndex = key;
