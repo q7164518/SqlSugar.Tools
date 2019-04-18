@@ -1182,8 +1182,8 @@ namespace SqlSugar.Tools
             switch (type)
             {
                 case DataBaseType.SQLServer:
-                    var sql = @"select name as TableName, g.TableDesc as TableDesc  From SysObjects j
-inner join
+                    var sql = @"select name as TableName, ISNULL(j.TableDesc, '') as TableDesc  From SysObjects g
+left join
 (
 select * from
 (SELECT 
@@ -1194,15 +1194,33 @@ FROM
 inner join 
     sysobjects d 
 on 
-    a.id=d.id  and (d.type='U' OR d.type = 'V')
+    a.id=d.id  and d.xtype='U' and  d.name<>'dtproperties'
 inner join
 sys.extended_properties f
 on 
     d.id=f.major_id and f.minor_id=0) t
 	where t.TableName!=''
-	) g on j.name = g.TableName
-	order by j.name asc";
-                    return await SQLServerHelper.QueryDataTable(linkString, sql);
+	) j on g.name = j.TableName
+	Where g.xtype='U'
+	order by TableName ASC";
+                    var table1 = await SQLServerHelper.QueryDataTable(linkString, sql);
+                    sql = @"select name as TableName,'' as TableDesc   From SysObjects j where j.xtype='V' order by name asc";
+                    var table2 = await SQLServerHelper.QueryDataTable(linkString, sql);
+                    DataTable newDataTable = table1.Clone();
+                    object[] obj = new object[newDataTable.Columns.Count];
+                    for (int i = 0; i < table1.Rows.Count; i++)
+                    {
+                        table1.Rows[i].ItemArray.CopyTo(obj, 0);
+                        newDataTable.Rows.Add(obj);
+                    }
+
+                    for (int i = 0; i < table2.Rows.Count; i++)
+                    {
+                        table2.Rows[i].ItemArray.CopyTo(obj, 0);
+                        newDataTable.Rows.Add(obj);
+                    }
+
+                    return newDataTable;
                 case DataBaseType.MySQL:
                     var database = linkString.Substring(linkString.IndexOf("Database=") + 9, linkString.IndexOf(";port=") - linkString.IndexOf("Database=") - 9);
                     var sql1 = $"SELECT TABLE_NAME as TableName, Table_Comment as TableDesc FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = '{database}' order by TableName asc";
