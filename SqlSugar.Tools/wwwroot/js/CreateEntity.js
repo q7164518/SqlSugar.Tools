@@ -8,15 +8,10 @@
             <el-button style="padding: 2px 4px;" icon="el-icon-download" type="success" size="mini" @click="$root.saveAllTables(data.node, data.node.data)"></el-button>\
         </el-tooltip>\
     </span>\
-    <span style="" v-else>\
-        <el-tooltip class="item" effect="dark" content="点击生成预览代码, 生成预览后按Ctrl + S可以保存" placement="right">\
-            <el-button style="padding: 2px 4px;" icon="el-icon-view" type="success" size="mini" @click="$root.createOne(data.node, data.node.data)"></el-button>\
-        </el-tooltip>\
-    </span>\
     <span>\
-        <el-tooltip class="item" effect="dark" :content="data.node.label" placement="top">\
+        <el-tooltip class="item" effect="dark" :content="data.node.label" placement="right">\
             <span v-if="data.node.level === 1" style="font-size:14px;"><span style="padding:0px"></span>{{data.node.label}}</span>\
-            <span v-else style="font-size:10px;"><span style="padding:0px"></span>{{data.node.label}}</span>\
+            <span v-else style="font-size:10px;" @click="$root.createOne(data.node, data.node.data)"><span style="padding:0px"></span>{{data.node.label}}</span>\
         </el-tooltip>\
     </span>\
 </span>',

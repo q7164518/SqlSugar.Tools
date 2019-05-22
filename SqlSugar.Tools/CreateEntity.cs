@@ -1182,7 +1182,7 @@ namespace SqlSugar.Tools
             switch (type)
             {
                 case DataBaseType.SQLServer:
-                    var sql = @"select name as TableName, ISNULL(j.TableDesc, '') as TableDesc  From SysObjects g
+                    var sql = @"select name as TableName, ISNULL(j.TableDesc, '') as TableDesc  From sysobjects g
 left join
 (
 select * from
@@ -1204,7 +1204,7 @@ on
 	Where g.xtype='U'
 	order by TableName ASC";
                     var table1 = await SQLServerHelper.QueryDataTable(linkString, sql);
-                    sql = @"select name as TableName,'' as TableDesc   From SysObjects j where j.xtype='V' order by name asc";
+                    sql = @"select name as TableName,'' as TableDesc   From sysobjects j where j.xtype='V' order by name asc";
                     var table2 = await SQLServerHelper.QueryDataTable(linkString, sql);
                     DataTable newDataTable = table1.Clone();
                     object[] obj = new object[newDataTable.Columns.Count];
@@ -1315,7 +1315,7 @@ ORDER BY
             if (type == DataBaseType.SQLServer)
             {
                 tableInfo = await SQLServerHelper.QueryTableInfo(linkString, $"select * from [{nodeName}] where 1=2");
-                colsInfos = await SQLServerHelper.QueryDataTable(linkString, "SELECT OBJNAME,VALUE FROM ::FN_LISTEXTENDEDPROPERTY (NULL, 'USER', 'DBO', 'TABLE', '" + nodeName + "', 'COLUMN', DEFAULT)", null);
+                colsInfos = await SQLServerHelper.QueryDataTable(linkString, "SELECT objname,value FROM ::fn_listextendedproperty (NULL, 'user', 'dbo', 'table', '" + nodeName + "', 'column', DEFAULT)", null);
                 this.GetCode(
                     tableInfo,
                     colsInfos,

@@ -1,0 +1,189 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link href="../css/element.css" rel="stylesheet" />
+    <link href="../css/base.css" rel="stylesheet" />
+    <link href="../css/CreateEntity.css" rel="stylesheet" />
+    <link href="../css/DBMove.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app" v-loading.fullscreen.lock="loading">
+        <div id="tool">
+            <el-tooltip class="item" effect="dark" content="退出程序" placement="right">
+                <el-button onclick="exit()" style="top:10px" class="tool-btn" icon="el-icon-close" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最大化" placement="right">
+                <el-button n-ui-command="maximize" style="top:60px" class="tool-btn" icon="el-icon-plus" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="最小化" placement="right">
+                <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
+            </el-tooltip>
+        </div>
+        <div id="td">
+            <p class="left-title" style="height:100px">数 据 库 迁 移</p>
+        </div>
+        <el-steps :active="activeIndex" simple class="top-step">
+            <el-step title="选择源" icon="el-icon-edit"></el-step>
+            <el-step title="选择目标" icon="el-icon-location-outline"></el-step>
+            <el-step title="选择表" icon="el-icon-tickets"></el-step>
+            <el-step title="开始迁移" icon="el-icon-loading"></el-step>
+            <el-step title="迁移完成" icon="el-icon-success"></el-step>
+        </el-steps>
+        <h1 v-if="activeIndex === 0" style="text-align:center;color:#444;font-family:微软雅黑;font-size:22px;">输入(选择)源数据库信息, 当前源数据库类型: <span style="color:#e6a23c">{{dbName[dbType]}}</span></h1>
+        <h1 v-if="activeIndex === 1" style="text-align:center;color:#444;font-family:微软雅黑;font-size:22px;">输入(选择)目标数据库信息, 当前目标数据库类型: <span style="color:#e6a23c">{{dbName[dbType]}}</span></h1>
+        <div style="width:100%;text-align:center">
+            <el-radio-group v-model="dbRadio" @change="dbRadioChange">
+                <el-radio-button v-for="(item, index) in dbName" :label="item" :key="index" :disabled="activeIndex === 1 && selectYuanDB.dbType === item"></el-radio-button>
+            </el-radio-group>
+        </div>
+        <div class="left-db" @click="leftDB">
+            <i class="el-icon-arrow-left"></i>
+        </div>
+        <div class="right-db" @click="rightDB">
+            <i class="el-icon-arrow-right"></i>
+        </div>
+        <div class="db-type-tab">
+            <transition name="step">
+                <div v-if="dbType === 0" class="sqlserver" key="sqlserver">
+                    <el-form ref="SQLServerForm" :model="SQLServerForm" label-width="100px" :rules="SQLServerFormRules">
+                        <el-form-item label="主机地址: " prop="host">
+                            <el-input v-model="SQLServerForm.host" placeholder="请输入主机地址"></el-input>
+                        </el-form-item>
+                        <el-form-item label="验证方式: ">
+                            <el-select v-model="SQLServerForm.linkType" placeholder="请选择验证方式" style="width:100%">
+                                <el-option label="Windows身份验证" value="win"></el-option>
+                                <el-option label="SQL Server身份验证" value="db"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="数据库用户名: " prop="account">
+                            <el-input v-model="SQLServerForm.account" placeholder="请输入数据库用户名" :disabled="SQLServerForm.linkType === 'win'"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库密码: " prop="pwd">
+                            <el-input v-model="SQLServerForm.pwd" placeholder="请输入数据库密码" :disabled="SQLServerForm.linkType === 'win'"></el-input>
+                        </el-form-item>
+                        <el-form-item label="选择数据库: ">
+                            <el-select v-model="SQLServerForm.db" placeholder="请选择数据库" style="width:100%" filterable>
+                                <el-option v-for="(item, index) in dbList" :label="item.name" :value="item.name" :key="index"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="success" style="width:48%" icon="el-icon-refresh" @click="testSQLServerLink">测试连接&加载数据库</el-button>
+                            <el-button type="danger" style="width:48%;float:right" icon="el-icon-check" @click="selectSqlServerDB">下一步</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <div v-if="dbType === 1" class="mysql" key="mysql">
+                    <el-form ref="MySqlForm" :model="MySqlForm" label-width="120px" :rules="MySqlFormRules">
+                        <el-form-item label="主机地址: " prop="host">
+                            <el-input v-model="MySqlForm.host" placeholder="请输入主机地址"></el-input>
+                        </el-form-item>
+                        <el-form-item label="端口号: " prop="port">
+                            <el-input v-model="MySqlForm.port" placeholder="请输入端口号"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库用户名: " prop="account">
+                            <el-input v-model="MySqlForm.account" placeholder="请输入数据库用户名"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库密码: " prop="pwd">
+                            <el-input v-model="MySqlForm.pwd" placeholder="请输入数据库密码"></el-input>
+                        </el-form-item>
+                        <el-form-item label="选择数据库: ">
+                            <el-select v-model="MySqlForm.db" placeholder="请选择数据库" style="width:100%" filterable>
+                                <el-option v-for="(item, index) in dbList" :label="item.name" :value="item.name" :key="index"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="success" style="width:48%" icon="el-icon-refresh" @click="testMySqlLink">测试连接&加载数据库</el-button>
+                            <el-button type="danger" style="width:48%;float:right" icon="el-icon-check" @click="selectMySqlDB">下一步</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <div v-if="dbType === 2" class="sqlite" key="sqlite">
+                    <el-form ref="SQLiteForm" :model="SQLiteForm" label-width="100px" :rules="SQLiteFormRules">
+                        <el-form-item label="数据文件: " prop="host">
+                            <el-input v-model="SQLiteForm.host" placeholder="请输入DB文件地址或选择文件">
+                                <el-button slot="append" icon="el-icon-setting" @click="selectDBFile">选择DB文件</el-button>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库密码: ">
+                            <el-input v-model="SQLiteForm.pwd" placeholder="请输入数据库密码, 没有密码则不写"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="success" style="width:48%" icon="el-icon-refresh">测试连接</el-button>
+                            <el-button type="danger" style="width:48%;float:right" icon="el-icon-check">下一步</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <div v-if="dbType === 3" class="oracle" key="oracle">
+                    <el-form ref="OracleForm" :model="OracleForm" label-width="140px" :rules="OracleFormRules">
+                        <el-form-item label="连接方式: ">
+                            <el-select v-model="OracleForm.linkType" placeholder="请选连接方式" style="width:100%">
+                                <el-option label="Basic" value="Basic"></el-option>
+                                <el-option label="TNS" value="TNS"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="端口号: " prop="port" v-if="OracleForm.linkType === 'Basic'">
+                            <el-input v-model="OracleForm.port" placeholder="请输入端口号"></el-input>
+                        </el-form-item>
+                        <el-form-item label="主机地址: " prop="host">
+                            <el-input v-model="OracleForm.host" placeholder="请输入主机地址"></el-input>
+                        </el-form-item>
+                        <el-form-item label="Service Name/SID: " prop="SNSID" v-if="OracleForm.linkType === 'Basic'">
+                            <el-input v-model="OracleForm.SNSID" placeholder="请输入Service Name/SID"></el-input><br />
+                            <el-radio v-model="OracleForm.radio" label="Service">Service Name</el-radio>
+                            <el-radio v-model="OracleForm.radio" label="SID">SID</el-radio>
+                        </el-form-item>
+                        <el-form-item label="数据库用户名: " prop="account">
+                            <el-input v-model="OracleForm.account" placeholder="请输入数据库用户名"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库密码: " prop="pwd">
+                            <el-input v-model="OracleForm.pwd" placeholder="请输入数据库密码"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="success" style="width:48%" icon="el-icon-refresh">测试连接</el-button>
+                            <el-button type="danger" style="width:48%;float:right" icon="el-icon-check">下一步</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <div v-if="dbType === 4" class="postregsql" key="postregsql">
+                    <el-form ref="PGSqlForm" :model="PGSqlForm" label-width="120px" :rules="PGSqlFormRules">
+                        <el-form-item label="主机地址: " prop="host">
+                            <el-input v-model="PGSqlForm.host" placeholder="请输入主机地址"></el-input>
+                        </el-form-item>
+                        <el-form-item label="端口号: " prop="port">
+                            <el-input v-model="PGSqlForm.port" placeholder="请输入端口号"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库用户名: " prop="account">
+                            <el-input v-model="PGSqlForm.account" placeholder="请输入数据库用户名"></el-input>
+                        </el-form-item>
+                        <el-form-item label="数据库密码: " prop="pwd">
+                            <el-input v-model="PGSqlForm.pwd" placeholder="请输入数据库密码"></el-input>
+                        </el-form-item>
+                        <el-form-item label="连接数据库: " prop="db">
+                            <el-input v-model="PGSqlForm.db" placeholder="请输入要连接的数据库"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="success" style="width:48%" icon="el-icon-refresh">测试连接</el-button>
+                            <el-button type="danger" style="width:48%;float:right" icon="el-icon-check">下一步</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+            </transition>
+        </div>
+        <div class="botom-nav">
+            <el-breadcrumb separator-class="el-icon-arrow-right">
+                <el-breadcrumb-item><a href="javascript:void(0);" @click="toStpe1">选择源数据库</a></el-breadcrumb-item>
+                <el-breadcrumb-item v-if="activeIndex >= 1"><a href="javascript:void(0);" @click="toStpe2">选择目标数据库</a></el-breadcrumb-item>
+                <el-breadcrumb-item v-if="activeIndex >= 2"><a href="javascript:void(0);">选择数据表</a></el-breadcrumb-item>
+                <el-breadcrumb-item v-if="activeIndex >= 3">开始迁移</el-breadcrumb-item>
+                <el-breadcrumb-item v-if="activeIndex >= 4">迁移完成</el-breadcrumb-item>
+            </el-breadcrumb>
+        </div>
+    </div>
+</body>
+</html>
+<script src="../js/vue.js"></script>
+<script src="../js/element.js"></script>
+<script src="../js/DBMove.js"></script>

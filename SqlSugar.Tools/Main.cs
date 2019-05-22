@@ -59,6 +59,14 @@ namespace SqlSugar.Tools
                 });
             };
 
+            GlobalObject.AddFunction("showDBMove").Execute += (func, args) =>
+            {
+                this.RequireUIThread(() =>
+                {
+                    DBMove.ShowWindow();
+                });
+            };
+
             var qq = base.GlobalObject.AddObject("qq");
             var addedQun = qq.AddFunction("addedQun");
             addedQun.Execute += (func, args) =>

@@ -6,6 +6,10 @@
     user-select: none; /* Non-prefixed version, currently*/
     background: #EFF1F4;
 }
+body{
+    padding:0;
+    margin:0;
+}
 @keyframes dialog-fade-in {
   0% {
     transform: scale3d(.3,.3,.3);
