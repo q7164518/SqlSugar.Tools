@@ -1,4 +1,7 @@
-﻿.top-step {
+﻿.el-table .warning-row {
+    background: #f0f9eb;
+}
+.top-step {
     background: #2E3238;
     top: 0;
     border-radius:0;
@@ -98,4 +101,64 @@
     position:fixed;
     left:45px;
     bottom:0;
+}
+.move-setting {
+    margin-left: 40px;
+    width: calc(100% - 40px);
+    font-size: 0;
+    position:relative;
+}
+.move-setting > div {
+    font-size:medium;
+    display:inline-block;
+    width:33.33333333333333333333333333%;
+    position:absolute;
+    top:0;
+}
+.move-setting > div .title{
+    font-size:13px;
+    display:inline-block;
+    width:100%;
+    text-align:left;
+    margin:10px 0
+}
+.my-btn{
+    display:inline-block;
+    margin-bottom:10px;
+}
+.move-setting-item{
+    width:calc(100% - 20px);
+    margin:0 auto;
+}
+.line1 {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: calc(33.33333333333333333333333333% + 25px);
+    margin: auto;
+    border-left: 1px solid #1883D7;
+    z-index: -1;
+}
+.line2 {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: calc(33.33333333333333333333333333% - 15px);
+    margin: auto;
+    border-left: 1px solid #1883D7;
+    z-index: -1;
+}
+.tables-div1 {
+    position: fixed;
+    top:100px;
+    left:50px;
+    height: calc(100% - 170px);
+    width: calc(33.33333333333333333333333333% - 35px);
+}
+.tables-div2 {
+    position: fixed;
+    top: 100px;
+    left: calc(33.33333333333333333333333333% + 35px);
+    height: calc(100% - 170px);
+    width: calc(33.33333333333333333333333333% - 35px);
 }

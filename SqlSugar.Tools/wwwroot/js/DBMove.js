@@ -177,10 +177,36 @@ const vue = new Vue({
             selectMubiaoDB: {
                 dbType: '',
                 linkString: ''
+            },
+            yuanTableData: [],
+            yuanTableDataOld: [],
+            mubiaoTableData: [],
+            mubiaoTableDataOld: [],
+            yuanTableDataSearch: '',
+            mubiaoTableDataSearch: '',
+            settingObj: {
+                tableData: false,
+                tableCover: false,
+                tableAny: false,
+                dataRows: 500
             }
         };
     },
+    watch: {
+        yuanTableDataSearch(val) {
+            this.yuanTableDataSearchFunc();
+        },
+        mubiaoTableDataSearch(val) {
+            this.mubiaoTableDataSearchFunc();
+        }
+    },
     methods: {
+        tableRowClassName({ row, rowIndex }) {
+            if (rowIndex % 2 === 1) {
+                return 'warning-row';
+            }
+            return '';
+        },
         leftDB() {
             let thisIndex = this.dbName.findIndex((value) => value === this.selectYuanDB.dbType);
             let itemIndex = this.dbType;
@@ -329,6 +355,9 @@ const vue = new Vue({
             this.activeIndex = 0;
             this.testIsSuccess = false;
             this.dbList = [];
+            this.yuanTableData = this.mubiaoTableData = this.yuanTableDataOld = this.mubiaoTableDataOld = [];
+            this.yuanTableDataSearch = '';
+            this.mubiaoTableDataSearch = '';
         },
         toStpe2() {
             let thisIndex = this.dbName.findIndex((value) => value === this.selectYuanDB.dbType);
@@ -344,6 +373,46 @@ const vue = new Vue({
             this.activeIndex = 1;
             this.testIsSuccess = false;
             this.dbList = [];
+            this.yuanTableData = this.mubiaoTableData = this.yuanTableDataOld = this.mubiaoTableDataOld = [];
+            this.yuanTableDataSearch = '';
+            this.mubiaoTableDataSearch = '';
+        },
+        loadingTablesYuan() {
+            let objName;
+            if (this.selectYuanDB.dbType === 'SqlServer') {
+                objName = sqlServer;
+            } else if (this.selectYuanDB.dbType === 'MySQL') {
+                objName = mysql;
+            }
+            this.loading = true;
+            objName.loadingTables(this.selectYuanDB.linkString, true);
+        },
+        loadingTablesMubiao() {
+            let objName;
+            if (this.selectMubiaoDB.dbType === 'SqlServer') {
+                objName = sqlServer;
+            } else if (this.selectMubiaoDB.dbType === 'MySQL') {
+                objName = mysql;
+            }
+            this.loading = true;
+            objName.loadingTables(this.selectMubiaoDB.linkString, false);
+        },
+        yuanTableDataRowClick(row, column, event) {
+            this.$refs.yuanTableData.toggleRowSelection(row);
+        },
+        yuanTableDataSearchFunc() {
+            if (this.yuanTableDataSearch) {
+                this.yuanTableData = this.yuanTableDataOld.filter(val => val.TableName.toLowerCase().indexOf(this.yuanTableDataSearch.toLowerCase()) >= 0);
+            } else {
+                this.yuanTableData = this.yuanTableDataOld;
+            }
+        },
+        mubiaoTableDataSearchFunc() {
+            if (this.mubiaoTableDataSearch) {
+                this.mubiaoTableData = this.mubiaoTableDataOld.filter(val => val.TableName.toLowerCase().indexOf(this.mubiaoTableDataSearch.toLowerCase()) >= 0);
+            } else {
+                this.mubiaoTableData = this.mubiaoTableDataOld;
+            }
         }
     },
     created() {
@@ -376,4 +445,9 @@ function hideLoading() {
 function setDbList(json) {
     const dbList = JSON.parse(json);
     vue.dbList = dbList;
+}
+
+function setTables(json, propName) {
+    vue[propName] = JSON.parse(json);
+    vue[propName + 'Old'] = JSON.parse(json);
 }
