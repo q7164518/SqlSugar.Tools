@@ -39,5 +39,13 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
         /// <param name="connectionString">连接字符串</param>
         /// <returns></returns>
         Task<bool> TestLink(string connectionString);
+
+        /// <summary>
+        /// 执行建表
+        /// </summary>
+        /// <param name="connectionString">连接字符串</param>
+        /// <param name="sqlString">建表SQL语句</param>
+        /// <returns></returns>
+        Task<int> CreateTable(string connectionString, string sqlString);
     }
 }

@@ -4,9 +4,11 @@ using Newtonsoft.Json;
 using SqlSugar.Tools.DBMoveTools.DBHelper;
 using SqlSugar.Tools.Model;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -30,6 +32,13 @@ namespace SqlSugar.Tools
                     GC.Collect();
                 });
             };
+            base.GlobalObject.AddFunction("showDBTypeSetting").Execute += (func, args) =>
+            {
+                this.RequireUIThread(() =>
+                {
+                    new DBTypeSetting().ShowDialog();
+                });
+            };
 
             var sqlite = base.GlobalObject.AddObject("sqlite");
             var selectDBFile = sqlite.AddFunction("selectDBFile");  //选择db文件方法
@@ -50,12 +59,15 @@ namespace SqlSugar.Tools
                 }
             };
 
-            this.RegiestFunc("SQL Server", "sqlServer");
+            this.RegiestFunc("SqlServer", "sqlServer");
             this.RegiestFunc("MySQL", "mysql");
+            this.RegiestStartMove();
+#if DEBUG
             base.LoadHandler.OnLoadEnd += (object sender, CfxOnLoadEndEventArgs e) =>
             {
                 base.Chromium.ShowDevTools();
             };
+#endif
         }
 
         public static void ShowWindow()
@@ -97,7 +109,7 @@ namespace SqlSugar.Tools
                         {
                             EvaluateJavascript("testSuccessMsg()", (value, exception) => { });
                             string sqlString = string.Empty;
-                            if (dbName == "SQL Server")
+                            if (dbName == "SqlServer")
                             {
                                 sqlString = "select name from sysdatabases where dbid>4";
                             }
@@ -165,22 +177,66 @@ namespace SqlSugar.Tools
             };
         }
 
+        /// <summary>
+        /// 注册开始迁移方法到JS
+        /// </summary>
+        private void RegiestStartMove()
+        {
+            var objName = base.GlobalObject.AddObject("move");
+            var startMove = objName.AddFunction("startMove");
+            startMove.Execute += async (func, args) =>
+            {
+                var tablesJson = (args.Arguments[0].StringValue ?? string.Empty).Trim();
+                var yuanDBName = (args.Arguments[1].StringValue ?? string.Empty).Trim();
+                var yuanConnectionString = (args.Arguments[2].StringValue ?? string.Empty).Trim();
+
+                var mubiaoDBName = (args.Arguments[3].StringValue ?? string.Empty).Trim();
+                var mubiaoConnectionString = (args.Arguments[4].StringValue ?? string.Empty).Trim();
+                tablesJson = (tablesJson ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(tablesJson))
+                {
+                    MessageBox.Show("请至少选择一个表进行迁移");
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                    return;
+                }
+                try
+                {
+                    var yuanDBHelper = this.CreateDBHelper(yuanDBName);
+                    var mubiaoDBHelper = this.CreateDBHelper(mubiaoDBName);
+                    var tables = JsonConvert.DeserializeObject<RegiestStartMoveTablesModel[]>(tablesJson);
+                    foreach (var table in tables)
+                    {
+                        var dy = await yuanDBHelper.QueryTableInfo(yuanConnectionString, table.TableName);
+                        var createTableSqlString = this.SqlServerTableToMySql(dy, table.TableName);
+                        var result = await mubiaoDBHelper.CreateTable(mubiaoConnectionString, createTableSqlString);
+                        ;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"迁移表错误, Msg: {ex.Message}");
+                    EvaluateJavascript("hideLoading()", (value, exception) => { });
+                    return;
+                }
+            };
+        }
+
         private IDBHelper CreateDBHelper(string dbName)
         {
-            switch (dbName)
+            switch (dbName.ToLower())
             {
-                case "SQL Server": return new SqlServerDBHelper();
-                case "MySQL": return new MySqlDBHelper();
+                case "sqlserver": return new SqlServerDBHelper();
+                case "mysql": return new MySqlDBHelper();
                 default: return null;
             }
         }
 
         private DataBaseType GetDataBaseType(string dbName)
         {
-            switch (dbName)
+            switch (dbName.ToLower())
             {
-                case "SQL Server": return DataBaseType.SQLServer;
-                case "MySQL": return DataBaseType.MySQL;
+                case "sqlserver": return DataBaseType.SQLServer;
+                case "mysql": return DataBaseType.MySQL;
                 default: return DataBaseType.SQLServer;
             }
         }
@@ -244,6 +300,77 @@ ORDER BY
                     break;
             }
             return await dBHelper.QueryDataTable(linkString, sqlString);
+        }
+
+        private readonly List<DBTypeMappingModel> SqlServerMappingTest = new List<DBTypeMappingModel>
+        {
+            new DBTypeMappingModel { MSSQL = "bigint", MySql = "bigint", SQLite = "integer", Oracle = "number(19)", PostregSQL = "bigint", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "binary", MySql = "binary", SQLite = "integer", Oracle = "raw(1-2000)/blob", PostregSQL = "bytea", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "bit", MySql = "tinyint", SQLite = "integer", Oracle = "number(1)", PostregSQL = "boolean", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "char", MySql = "char", SQLite = "integer", Oracle = "char(1-2000)/varchar2(2001-4000)/clob", PostregSQL = "char", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "date", MySql = "date", SQLite = "integer", Oracle = "date", PostregSQL = "date", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "datetime", MySql = "datetime", SQLite = "integer", Oracle = "date", PostregSQL = "timestamp", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "datetime2", MySql = "datetime", SQLite = "integer", Oracle = "timestamp(7)", PostregSQL = "timestamp", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "datetimeoffset", MySql = "datetime", SQLite = "integer", Oracle = "timestamp(7)", PostregSQL = "timestamp", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "decimal", MySql = "decimal", SQLite = "integer", Oracle = "number", PostregSQL = "numeric", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "float", MySql = "float", SQLite = "integer", Oracle = "float", PostregSQL = "double", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "int", MySql = "int", SQLite = "integer", Oracle = "number(10)", PostregSQL = "integer", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "money", MySql = "float", SQLite = "integer", Oracle = "number(19,4)", PostregSQL = "numeric(19,4)", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "nchar", MySql = "char", SQLite = "integer", Oracle = "char(1-1000)/nclob", PostregSQL = "varchar", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "ntext", MySql = "text", SQLite = "integer", Oracle = "nclob", PostregSQL = "text", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "numeric", MySql = "decimal", SQLite = "integer", Oracle = "number", PostregSQL = "numeric", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "nvarchar", MySql = "varchar", SQLite = "integer", Oracle = "varchar2(1-2000)/nclob", PostregSQL = "varchar", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "real", MySql = "float", SQLite = "integer", Oracle = "real", PostregSQL = "real", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "smalldatetime", MySql = "datetime", SQLite = "integer", Oracle = "date", PostregSQL = "timestamp", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "smallint", MySql = "smallint", SQLite = "integer", Oracle = "number(5)", PostregSQL = "smallint", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "smallmoney", MySql = "float", SQLite = "integer", Oracle = "number(10,4)", PostregSQL = "numeric(10,4)", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "text", MySql = "text", SQLite = "integer", Oracle = "clob", PostregSQL = "text", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "time", MySql = "time", SQLite = "integer", Oracle = "varchar(16)", PostregSQL = "timestamp", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "timestamp", MySql = "timestamp", SQLite = "integer", Oracle = "raw(8)", PostregSQL = "bigint", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "tinyint", MySql = "tinyint", SQLite = "integer", Oracle = "number(3)", PostregSQL = "smallint", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "uniqueidentifier", MySql = "varchar(40)", SQLite = "integer", Oracle = "char(40)", PostregSQL = "smallint", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "varbinary", MySql = "varbinary", SQLite = "integer", Oracle = "raw(1-2000)/clob", PostregSQL = "bytea", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "varchar", MySql = "varchar", SQLite = "integer", Oracle = "varchar2(1-4000)/clob", PostregSQL = "varchar", Desc = "" },
+            new DBTypeMappingModel { MSSQL = "xml", MySql = "text", SQLite = "integer", Oracle = "nclob", PostregSQL = "text", Desc = "" }
+        };
+
+        /// <summary>
+        /// SQL Server的表, 转Mysql建表SQL
+        /// </summary>
+        /// <param name="table">数据表信息</param>
+        /// <returns>MySQL建表SQL</returns>
+        private string SqlServerTableToMySql(DataTable table, string tableName)
+        {
+            var keys = new List<string>();  //保存主键列集合
+            var sqlString = new StringBuilder($@"
+CREATE TABLE `{tableName}`  (
+");
+            foreach (DataRow item in table.Rows)
+            {
+                var columnName = item["ColumnName"].ToString();
+                var dataTypeName = item["DataTypeName"].ToString();
+                var newDataTypeName = SqlServerMappingTest.FirstOrDefault(f => f.MSSQL.ToLower() == dataTypeName.ToLower()).MySql;
+                switch (Convert.ToInt32(item["ProviderType"]))
+                {
+                    case 3:     //char
+                    case 12:    //nvarchar
+                    case 22:    //varchar
+                        newDataTypeName += $"({item["ColumnSize"]})"; break;   //表示该字段有一个长度设置, 比如varchar(20)
+                    case 5:     //decimal
+                        newDataTypeName += $"({item["NumericPrecision"]},{item["NumericScale"]})"; break;   //表示该字段有两个个长度设置, decimal(18,2)
+                    default: break;
+                }
+                sqlString.Append($"`{columnName}` {newDataTypeName} {(((bool)item["AllowDBNull"]) ? "NULL" : "NOT NULL")} {(((bool)item["IsIdentity"]) ? "AUTO_INCREMENT" : "")},{Environment.NewLine}");
+                if ((bool)item["IsKey"]) keys.Add(columnName);  //保存主键
+            }
+            sqlString.Append("PRIMARY KEY (");
+            foreach (var item in keys)
+            {
+                sqlString.Append($"`{item}`,");
+            }
+            sqlString = sqlString.Remove(sqlString.Length - 1, 1);
+            sqlString.Append($"){Environment.NewLine});");
+            return sqlString.ToString();
         }
     }
 }

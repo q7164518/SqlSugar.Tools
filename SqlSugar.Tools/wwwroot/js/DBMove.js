@@ -189,7 +189,8 @@ const vue = new Vue({
                 tableCover: false,
                 tableAny: false,
                 dataRows: 500
-            }
+            },
+            selectTables: []
         };
     },
     watch: {
@@ -358,6 +359,7 @@ const vue = new Vue({
             this.yuanTableData = this.mubiaoTableData = this.yuanTableDataOld = this.mubiaoTableDataOld = [];
             this.yuanTableDataSearch = '';
             this.mubiaoTableDataSearch = '';
+            this.selectTables = [];
         },
         toStpe2() {
             let thisIndex = this.dbName.findIndex((value) => value === this.selectYuanDB.dbType);
@@ -376,6 +378,7 @@ const vue = new Vue({
             this.yuanTableData = this.mubiaoTableData = this.yuanTableDataOld = this.mubiaoTableDataOld = [];
             this.yuanTableDataSearch = '';
             this.mubiaoTableDataSearch = '';
+            this.selectTables = [];
         },
         loadingTablesYuan() {
             let objName;
@@ -412,6 +415,20 @@ const vue = new Vue({
                 this.mubiaoTableData = this.mubiaoTableDataOld.filter(val => val.TableName.toLowerCase().indexOf(this.mubiaoTableDataSearch.toLowerCase()) >= 0);
             } else {
                 this.mubiaoTableData = this.mubiaoTableDataOld;
+            }
+        },
+        handleSelectionChange(val) {
+            this.selectTables = val;
+        },
+        startMoveFunc() {
+            if (this.selectTables && this.selectTables.length > 0) {
+                move.startMove(JSON.stringify(this.selectTables), this.selectYuanDB.dbType, this.selectYuanDB.linkString, this.selectMubiaoDB.dbType, this.selectMubiaoDB.linkString);
+            } else {
+                this.$notify({
+                    title: '迁移提示',
+                    message: '请至少选择一个表进行迁移',
+                    type: 'warning'
+                });
             }
         }
     },

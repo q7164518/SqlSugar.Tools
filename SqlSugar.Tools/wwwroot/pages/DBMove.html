@@ -21,8 +21,11 @@
             <el-tooltip class="item" effect="dark" content="最小化" placement="right">
                 <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
             </el-tooltip>
+            <el-tooltip class="item" effect="dark" content="数据库字段类型设置" placement="right">
+                <el-button onclick="showDBTypeSetting()" style="top:160px" class="tool-btn" icon="el-icon-setting" circle size="small"></el-button>
+            </el-tooltip>
         </div>
-        <div id="td">
+        <div id="td" style="top:195px;">
             <p class="left-title" style="height:100px">数 据 库 迁 移</p>
         </div>
         <el-steps :active="activeIndex" simple class="top-step">
@@ -180,7 +183,7 @@
                     <span class="title"><el-tag type="danger">源数据库数据表</el-tag></span>
                     <div class="tables-div1">
                         <el-input placeholder="请输入表名搜索(模糊搜索)" v-model="yuanTableDataSearch" style="width:100%;"></el-input>
-                        <el-table ref="yuanTableData" @row-click="yuanTableDataRowClick" :data="yuanTableData" style="width: 100%" border :row-class-name="tableRowClassName" height="100%">
+                        <el-table @selection-change="handleSelectionChange" ref="yuanTableData" @row-click="yuanTableDataRowClick" :data="yuanTableData" style="width: 100%" border :row-class-name="tableRowClassName" height="100%">
                             <el-table-column type="selection" width="33"></el-table-column>
                             <el-table-column prop="TableName" label="表名" show-overflow-tooltip></el-table-column>
                             <el-table-column prop="TableDesc" label="表说明" show-overflow-tooltip></el-table-column>
@@ -208,9 +211,9 @@
                     <div>
                         <div class="my-btn"><el-button type="primary" size="small" icon="el-icon-tickets" @click="loadingTablesYuan">加载源数据库的数据表</el-button></div>
                         <div class="my-btn"><el-button type="danger" size="small" icon="el-icon-tickets" @click="loadingTablesMubiao">加载目标数据库已有的数据表</el-button></div>
-                        <div class="my-btn"><el-button type="warning" size="small" icon="el-icon-warning">数据库字段类型映射关系设置</el-button></div>
+                        <div class="my-btn"><el-button type="warning" size="small" icon="el-icon-setting">数据库字段类型映射关系设置</el-button></div>
                     </div>
-                    <div>
+                    <div style="margin-top:30px;">
                         <div class="my-btn">
                             <el-tooltip class="item" effect="dark" content="不勾选, 只迁移表结构, 如勾选, 会把表数据也迁移过去" placement="top">
                                 <el-checkbox v-model="settingObj.tableData">迁移表数据</el-checkbox>
@@ -234,13 +237,15 @@
                         </el-tooltip>
                     </div>
                     <div style="margin-top:30px;">
-                        <el-button type="success" size="small" icon="el-icon-success" style="width:100%">开始迁移</el-button>
+                        <el-button @click="startMoveFunc" type="success" size="small" icon="el-icon-success" style="width:100%">开始迁移</el-button>
                     </div>
                     <div style="margin-top:30px;">
                         <p style="font-size:12px;">本工具进行表数据迁移, 没有高深的算法, 就是循环查询添加</p>
                         <p style="font-size:12px;">所以不太适合运营环境迁移, 因为会花费很长的时间</p>
                         <p style="font-size:12px;">运营环境, 推荐使用专业的迁移工具</p>
                         <p style="font-size:12px;">你非要用它迁移运营环境, 那就得等很久, 并做好每次迁移行数合理的设计</p>
+                        <p style="font-size:12px;">本工具只会迁移DataTabel, 视图/函数/存储过程等, 不会进行迁移</p>
+                        <p style="font-size:12px;">DataTable的外键关系也不会迁移, 只会迁移主键</p>
                     </div>
                 </div>
             </div>

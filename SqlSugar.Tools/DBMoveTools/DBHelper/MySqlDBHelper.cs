@@ -22,9 +22,10 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
             return await Task.Run(() =>
             {
                 DataTable dt = new DataTable();
-                using (this.NewConnectionMethod(connectionString))
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlDataAdapter sda = new MySqlDataAdapter(sqlString, this._Con))
                 {
-                    MySqlDataAdapter sda = new MySqlDataAdapter(sqlString, this._Con);
                     if (parameters != null)
                     {
                         foreach (MySqlParameter item in parameters)
@@ -34,13 +35,9 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
                     {
                         sda.Fill(dt);
                         sda.Dispose();
-                        this._Con.Close();
-                        this._Con.Dispose();
                     }
                     catch (Exception e)
                     {
-                        this._Con.Close();
-                        this._Con.Dispose();
                         throw e;
                     }
                     return dt;
@@ -52,49 +49,59 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
         {
             DataTable dt;
             this.NewConnectionMethod(connectionString);
-            MySqlCommand cmd = new MySqlCommand($"select * from {tableName} where 1 = 2", this._Con);
-            try
+            using (this._Con)
+            using (MySqlCommand cmd = new MySqlCommand($"select * from {tableName} where 1 = 2", this._Con))
             {
-                this._Con.Open();
-                DbDataReader sdr = await cmd.ExecuteReaderAsync(CommandBehavior.KeyInfo);
-                dt = sdr.GetSchemaTable();  //获得表的结构
-                sdr.Close();
-                this._Con.Close();
-                this._Con.Dispose();
+                try
+                {
+                    this._Con.Open();
+                    using (DbDataReader sdr = await cmd.ExecuteReaderAsync(CommandBehavior.KeyInfo))
+                    {
+                        dt = sdr.GetSchemaTable();  //获得表的结构
+                        sdr.Close();
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+                return dt;
             }
-            catch (Exception e)
-            {
-                this._Con.Close();
-                this._Con.Dispose();
-                throw e;
-            }
-            return dt;
         }
 
         public async Task<bool> TestLink(string connectionString)
         {
+            return await Task.Run(() =>
+            {
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                {
+                    try
+                    {
+
+                        this._Con.Open();
+                        if (this._Con.State == ConnectionState.Open)
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            });
+        }
+
+        public async Task<int> CreateTable(string connectionString, string sqlString)
+        {
             this.NewConnectionMethod(connectionString);
-            try
+            using (this._Con)
+            using (MySqlCommand cmd = new MySqlCommand(sqlString, this._Con))
             {
-                await this._Con.OpenAsync();
-                if (this._Con.State == ConnectionState.Open)
-                {
-                    this._Con.Close();
-                    this._Con.Dispose();
-                    return true;
-                }
-                else
-                {
-                    this._Con.Close();
-                    this._Con.Dispose();
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                this._Con.Close();
-                this._Con.Dispose();
-                throw ex;
+                this._Con.Open();
+                return await cmd.ExecuteNonQueryAsync();
             }
         }
     }
