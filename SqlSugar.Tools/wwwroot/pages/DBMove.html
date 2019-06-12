@@ -32,7 +32,7 @@
             <el-step title="选择源" icon="el-icon-edit"></el-step>
             <el-step title="选择目标" icon="el-icon-location-outline"></el-step>
             <el-step title="选择表" icon="el-icon-tickets"></el-step>
-            <el-step title="开始迁移" icon="el-icon-loading"></el-step>
+            <el-step title="开始迁移" icon="el-icon-more"></el-step>
             <el-step title="迁移完成" icon="el-icon-success"></el-step>
         </el-steps>
         <div v-if="activeIndex <= 1">
@@ -211,16 +211,21 @@
                     <div>
                         <div class="my-btn"><el-button type="primary" size="small" icon="el-icon-tickets" @click="loadingTablesYuan">加载源数据库的数据表</el-button></div>
                         <div class="my-btn"><el-button type="danger" size="small" icon="el-icon-tickets" @click="loadingTablesMubiao">加载目标数据库已有的数据表</el-button></div>
-                        <div class="my-btn"><el-button type="warning" size="small" icon="el-icon-setting">数据库字段类型映射关系设置</el-button></div>
+                        <div class="my-btn"><el-button onclick="showDBTypeSetting()" type="warning" size="small" icon="el-icon-setting">数据库字段类型映射关系设置</el-button></div>
                     </div>
                     <div style="margin-top:30px;">
+                        <div class="my-btn">
+                            <el-tooltip class="item" effect="dark" content="如果勾选, 只会生成建表SQL提供保存" placement="top">
+                                <el-checkbox v-model="settingObj.onlySql">只生成建表SQL</el-checkbox>
+                            </el-tooltip>
+                        </div>
                         <div class="my-btn">
                             <el-tooltip class="item" effect="dark" content="不勾选, 只迁移表结构, 如勾选, 会把表数据也迁移过去" placement="top">
                                 <el-checkbox v-model="settingObj.tableData">迁移表数据</el-checkbox>
                             </el-tooltip>
                         </div>
                         <div class="my-btn">
-                            <el-tooltip class="item" effect="dark" content="如勾选, 将会删除目标数据库已有的同名数据表" placement="top">
+                            <el-tooltip class="item" effect="dark" content="如勾选, 将会删除目标数据库已有的同名数据表" placement="bottom">
                                 <el-checkbox v-model="settingObj.tableCover">覆盖已有的数据表</el-checkbox>
                             </el-tooltip>
                         </div>
@@ -229,12 +234,6 @@
                                 <el-checkbox v-model="settingObj.tableAny">同名表自动添加后缀</el-checkbox>
                             </el-tooltip>
                         </div>
-                    </div>
-                    <div>
-                        <span style="font-size:13px;">表数据每次迁移行数: </span>
-                        <el-tooltip class="item" effect="dark" content="每次查询多少行数据进行迁移" placement="left">
-                            <el-input-number v-model="settingObj.dataRows" :min="1"></el-input-number>
-                        </el-tooltip>
                     </div>
                     <div style="margin-top:30px;">
                         <el-button @click="startMoveFunc" type="success" size="small" icon="el-icon-success" style="width:100%">开始迁移</el-button>
@@ -264,4 +263,5 @@
 </html>
 <script src="../js/vue.js"></script>
 <script src="../js/element.js"></script>
+<script src="../js/DBTypeMapping.js"></script>
 <script src="../js/DBMove.js"></script>

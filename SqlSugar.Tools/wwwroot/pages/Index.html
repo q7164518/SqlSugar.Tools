@@ -19,8 +19,14 @@
             <el-tooltip class="item" effect="dark" content="最小化" placement="right">
                 <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
             </el-tooltip>
+            <el-tooltip v-if="particlesJSSwitch === '1'" class="item" effect="dark" content="关闭背景特效, 减少CPU占用" placement="right">
+                <el-button @click="closeParticles" style="top:160px" class="tool-btn" icon="el-icon-picture-outline" circle size="small"></el-button>
+            </el-tooltip>
+            <el-tooltip v-else class="item" effect="dark" content="打开背景特效, 会占用3%左右的CPU" placement="right">
+                <el-button @click="openParticles" style="top:160px" class="tool-btn" icon="el-icon-picture" circle size="small"></el-button>
+            </el-tooltip>
         </div>
-        <div id="td"></div>
+        <div id="td" style="top:195px;"></div>
         <h1 style="text-align:center;color:#444;font-family:微软雅黑">SQL Sugar ORM 工具箱</h1>
         <el-row :gutter="20" class="panel-group">
             <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="toWord()">
@@ -109,9 +115,11 @@
             <el-tag class="qqTag" type="danger" onclick="qq.addedQun('http://shang.qq.com/wpa/qunwpa?idkey=9f67b12250f496ca92e8615faeed11bd79fd8163ff51e03f002cd79561af3b27')">三群: 654015377</el-tag>
             <p style="font-size:12px;color:#666">请不要重复申请入群, 添加一个群即可, 留下位置给更多需要的人. </p>
         </div>
+        <div id="particles-js"></div>
     </div>
 </body>
 </html>
+<script src="../js/particles.js"></script>
 <script src="../js/vue.js"></script>
 <script src="../js/element.js"></script>
 <script src="../js/index.js"></script>

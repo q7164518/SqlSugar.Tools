@@ -47,26 +47,65 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
 
         public async Task<DataTable> QueryTableInfo(string connectionString, string tableName)
         {
-            DataTable dt;
-            this.NewConnectionMethod(connectionString);
-            using (this._Con)
-            using (MySqlCommand cmd = new MySqlCommand($"select * from {tableName} where 1 = 2", this._Con))
+            return await Task.Run(() =>
             {
-                try
+                DataTable dt;
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlCommand cmd = new MySqlCommand($"select * from {tableName} where 1 = 2", this._Con))
                 {
-                    this._Con.Open();
-                    using (DbDataReader sdr = await cmd.ExecuteReaderAsync(CommandBehavior.KeyInfo))
+                    try
                     {
-                        dt = sdr.GetSchemaTable();  //获得表的结构
-                        sdr.Close();
+                        this._Con.Open();
+                        using (DbDataReader sdr = cmd.ExecuteReader(CommandBehavior.KeyInfo))
+                        {
+                            dt = sdr.GetSchemaTable();  //获得表的结构
+                            sdr.Close();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw e;
+                    }
+                    //return dt;
+                }
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlDataAdapter sda = new MySqlDataAdapter($"SHOW FULL COLUMNS FROM `{tableName}`", this._Con))
+                {
+                    DataTable dt1 = new DataTable();
+                    try
+                    {
+                        sda.Fill(dt1);
+                        sda.Dispose();
+                        dt.Columns.Add("DataTypeName", typeof(string));
+                        for (int i = 0; i < dt.Rows.Count; i++)
+                        {
+                            var colName = dt.Rows[i]["ColumnName"].ToString();
+                            foreach (DataRow item in dt1.Rows)
+                            {
+                                if (item["Field"].ToString() == colName)
+                                {
+                                    var type = item["Type"].ToString();
+                                    var index = type.IndexOf('(');
+                                    if (index >= 0)
+                                    {
+                                        type = type.Substring(0, index);
+                                    }
+                                    dt.Rows[i]["DataTypeName"] = type;
+                                }
+                            }
+                        }
+                        dt1.Clear();
+                        dt1.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        throw e;
                     }
                 }
-                catch (Exception e)
-                {
-                    throw e;
-                }
                 return dt;
-            }
+            });
         }
 
         public async Task<bool> TestLink(string connectionString)
@@ -96,13 +135,65 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
 
         public async Task<int> CreateTable(string connectionString, string sqlString)
         {
-            this.NewConnectionMethod(connectionString);
-            using (this._Con)
-            using (MySqlCommand cmd = new MySqlCommand(sqlString, this._Con))
+            return await Task.Run(() =>
             {
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlCommand cmd = new MySqlCommand(sqlString, this._Con))
+                {
+                    this._Con.Open();
+                    return cmd.ExecuteNonQuery();
+                }
+            });
+        }
+
+        public async Task<bool> TableAny(string connectionString, string tableName)
+        {
+            return await Task.Run(() =>
+            {
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlCommand cmd = new MySqlCommand($"SHOW TABLES LIKE '{tableName}'", this._Con))
+                {
+                    this._Con.Open();
+                    var table = (cmd.ExecuteScalar())?.ToString()?.ToLower();
+                    return table == tableName.ToLower();
+                }
+            });
+        }
+
+        public async Task<IDataReader> QueryDataReader(string connectionString, string querySql)
+        {
+            return await Task.Run(() =>
+            {
+                this.NewConnectionMethod(connectionString);
+                MySqlCommand cmd = new MySqlCommand(querySql, this._Con);
                 this._Con.Open();
-                return await cmd.ExecuteNonQueryAsync();
-            }
+                return cmd.ExecuteReader(CommandBehavior.CloseConnection);
+            });
+        }
+
+        public async Task<int> Insert(string connectionString, string insertSql, List<IDataParameter> @params)
+        {
+            return await Task.Run(() =>
+            {
+                this.NewConnectionMethod(connectionString);
+                using (this._Con)
+                using (MySqlCommand cmd = new MySqlCommand(insertSql, this._Con))
+                {
+                    if (@params?.Count > 0)
+                    {
+                        foreach (var item in @params)
+                        {
+                            cmd.Parameters.Add(item as MySqlParameter);
+                        }
+                    }
+                    this._Con.Open();
+                    var result = cmd.ExecuteNonQuery();
+                    cmd.Parameters.Clear();
+                    return result;
+                }
+            });
         }
     }
 }

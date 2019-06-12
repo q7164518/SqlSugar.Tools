@@ -4,7 +4,8 @@
 .top-step {
     background: #2E3238;
     top: 0;
-    border-radius:0;
+    border-radius: 0;
+    margin-left:40px;
 }
 #app{
     margin:0 !important;

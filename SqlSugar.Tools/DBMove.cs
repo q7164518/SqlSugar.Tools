@@ -1,4 +1,5 @@
 ﻿using Chromium.Event;
+using MySql.Data.MySqlClient;
 using NetDimension.NanUI;
 using Newtonsoft.Json;
 using SqlSugar.Tools.DBMoveTools.DBHelper;
@@ -6,7 +7,9 @@ using SqlSugar.Tools.Model;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -154,7 +157,7 @@ namespace SqlSugar.Tools
                     try
                     {
                         var tables = await this.LoadingTables(linkString, this.GetDataBaseType(dbName), this.CreateDBHelper(dbName));
-                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "").Replace("\\", "\\\\");
                         tables.Clear(); tables.Dispose(); tables = null;
                         var propName = isYuan ? "yuanTableData" : "mubiaoTableData";
                         EvaluateJavascript($"setTables('{tablesJson}', '{propName}')", (value, exception) => { });
@@ -186,13 +189,18 @@ namespace SqlSugar.Tools
             var startMove = objName.AddFunction("startMove");
             startMove.Execute += async (func, args) =>
             {
-                var tablesJson = (args.Arguments[0].StringValue ?? string.Empty).Trim();
-                var yuanDBName = (args.Arguments[1].StringValue ?? string.Empty).Trim();
-                var yuanConnectionString = (args.Arguments[2].StringValue ?? string.Empty).Trim();
+                var tablesJson = (args.Arguments[0].StringValue ?? string.Empty).Trim();    //选择要迁移的表JSON数组
+                var yuanDBName = (args.Arguments[1].StringValue ?? string.Empty).Trim();    //源数据库名字
+                var yuanDBType = this.GetDataBaseType(yuanDBName);
+                var yuanConnectionString = (args.Arguments[2].StringValue ?? string.Empty).Trim();//源数据库连接字符串
 
-                var mubiaoDBName = (args.Arguments[3].StringValue ?? string.Empty).Trim();
-                var mubiaoConnectionString = (args.Arguments[4].StringValue ?? string.Empty).Trim();
+                var mubiaoDBName = (args.Arguments[3].StringValue ?? string.Empty).Trim();  //目标数据库名字
+                var mubiaoDBType = this.GetDataBaseType(mubiaoDBName);
+                var mubiaoConnectionString = (args.Arguments[4].StringValue ?? string.Empty).Trim();//目标数据库连接字符串
                 tablesJson = (tablesJson ?? string.Empty).Trim();
+
+                var settingJson = (args.Arguments[5].StringValue ?? string.Empty).Trim();   //迁移设置JSON
+                var mappingJson = (args.Arguments[6].StringValue ?? string.Empty).Trim();    //映射关系JSON
                 if (string.IsNullOrEmpty(tablesJson))
                 {
                     MessageBox.Show("请至少选择一个表进行迁移");
@@ -204,12 +212,60 @@ namespace SqlSugar.Tools
                     var yuanDBHelper = this.CreateDBHelper(yuanDBName);
                     var mubiaoDBHelper = this.CreateDBHelper(mubiaoDBName);
                     var tables = JsonConvert.DeserializeObject<RegiestStartMoveTablesModel[]>(tablesJson);
-                    foreach (var table in tables)
+                    var mapping = JsonConvert.DeserializeObject<List<DBTypeMappingModel>>(mappingJson);
+                    var setting = JsonConvert.DeserializeObject<SettingMove>(settingJson);
+                    if (setting.OnlySql)
                     {
-                        var dy = await yuanDBHelper.QueryTableInfo(yuanConnectionString, table.TableName);
-                        var createTableSqlString = this.SqlServerTableToMySql(dy, table.TableName);
-                        var result = await mubiaoDBHelper.CreateTable(mubiaoConnectionString, createTableSqlString);
-                        ;
+                        StringBuilder createTableSql = new StringBuilder();
+                        foreach (var table in tables)
+                        {
+                            var dy = await yuanDBHelper.QueryTableInfo(yuanConnectionString, table.TableName);
+                            var createTableSqlString = string.Empty;
+                            if (yuanDBType == DataBaseType.SQLServer && mubiaoDBType == DataBaseType.MySQL)
+                            {
+                                createTableSqlString = await this.SqlServerTableToMySql(mubiaoDBHelper, mubiaoConnectionString, dy, table.TableName, setting.TableCover, mapping);
+                            }
+                            else if (yuanDBType == DataBaseType.MySQL && mubiaoDBType == DataBaseType.SQLServer)
+                            {
+                                createTableSqlString = await this.MySqlTableToSqlServer(mubiaoDBHelper, mubiaoConnectionString, dy, table.TableName, setting.TableCover, mapping);
+                            }
+                            createTableSql.Append(createTableSqlString).Append(Environment.NewLine).Append(Environment.NewLine);
+                        }
+                        using (var saveFileDialog = new SaveFileDialog()
+                        {
+                            DefaultExt = "sql",
+                            Filter = "SQL(*.sql)|*.sql",
+                            FileName = "迁移建表SQL.sql",
+                            RestoreDirectory = true,
+                            Title = "保存迁移建表SQL"
+                        })
+                        {
+                            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                var localFilePath = saveFileDialog.FileName.ToString();
+                                using (StreamWriter sw = new StreamWriter(localFilePath, false))
+                                {
+                                    await sw.WriteLineAsync(createTableSql.ToString());
+                                }
+                                EvaluateJavascript("hideLoadingSuccess('生成建表SQL成功!')", (value, exception) => { });
+                            }
+                            else
+                            {
+                                EvaluateJavascript("hideLoading()", (value, exception) => { });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (var table in tables)
+                        {
+                            var dy = await yuanDBHelper.QueryTableInfo(yuanConnectionString, table.TableName);
+                            if (yuanDBType == DataBaseType.SQLServer && mubiaoDBType == DataBaseType.MySQL)
+                                await this.SqlServerToMySql(yuanDBHelper, yuanConnectionString, mubiaoDBHelper, mubiaoConnectionString, dy, table.TableName, setting, mapping);
+                            else if (yuanDBType == DataBaseType.MySQL && mubiaoDBType == DataBaseType.SQLServer)
+                                await this.MySqlToSqlServer(yuanDBHelper, yuanConnectionString, mubiaoDBHelper, mubiaoConnectionString, dy, table.TableName, setting, mapping);
+                        }
+                        EvaluateJavascript("hideLoadingSuccess('迁移成功!')", (value, exception) => { });
                     }
                 }
                 catch (Exception ex)
@@ -302,68 +358,25 @@ ORDER BY
             return await dBHelper.QueryDataTable(linkString, sqlString);
         }
 
-        private readonly List<DBTypeMappingModel> SqlServerMappingTest = new List<DBTypeMappingModel>
-        {
-            new DBTypeMappingModel { MSSQL = "bigint", MySql = "bigint", SQLite = "integer", Oracle = "number(19)", PostregSQL = "bigint", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "binary", MySql = "binary", SQLite = "integer", Oracle = "raw(1-2000)/blob", PostregSQL = "bytea", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "bit", MySql = "tinyint", SQLite = "integer", Oracle = "number(1)", PostregSQL = "boolean", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "char", MySql = "char", SQLite = "integer", Oracle = "char(1-2000)/varchar2(2001-4000)/clob", PostregSQL = "char", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "date", MySql = "date", SQLite = "integer", Oracle = "date", PostregSQL = "date", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "datetime", MySql = "datetime", SQLite = "integer", Oracle = "date", PostregSQL = "timestamp", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "datetime2", MySql = "datetime", SQLite = "integer", Oracle = "timestamp(7)", PostregSQL = "timestamp", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "datetimeoffset", MySql = "datetime", SQLite = "integer", Oracle = "timestamp(7)", PostregSQL = "timestamp", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "decimal", MySql = "decimal", SQLite = "integer", Oracle = "number", PostregSQL = "numeric", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "float", MySql = "float", SQLite = "integer", Oracle = "float", PostregSQL = "double", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "int", MySql = "int", SQLite = "integer", Oracle = "number(10)", PostregSQL = "integer", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "money", MySql = "float", SQLite = "integer", Oracle = "number(19,4)", PostregSQL = "numeric(19,4)", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "nchar", MySql = "char", SQLite = "integer", Oracle = "char(1-1000)/nclob", PostregSQL = "varchar", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "ntext", MySql = "text", SQLite = "integer", Oracle = "nclob", PostregSQL = "text", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "numeric", MySql = "decimal", SQLite = "integer", Oracle = "number", PostregSQL = "numeric", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "nvarchar", MySql = "varchar", SQLite = "integer", Oracle = "varchar2(1-2000)/nclob", PostregSQL = "varchar", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "real", MySql = "float", SQLite = "integer", Oracle = "real", PostregSQL = "real", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "smalldatetime", MySql = "datetime", SQLite = "integer", Oracle = "date", PostregSQL = "timestamp", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "smallint", MySql = "smallint", SQLite = "integer", Oracle = "number(5)", PostregSQL = "smallint", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "smallmoney", MySql = "float", SQLite = "integer", Oracle = "number(10,4)", PostregSQL = "numeric(10,4)", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "text", MySql = "text", SQLite = "integer", Oracle = "clob", PostregSQL = "text", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "time", MySql = "time", SQLite = "integer", Oracle = "varchar(16)", PostregSQL = "timestamp", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "timestamp", MySql = "timestamp", SQLite = "integer", Oracle = "raw(8)", PostregSQL = "bigint", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "tinyint", MySql = "tinyint", SQLite = "integer", Oracle = "number(3)", PostregSQL = "smallint", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "uniqueidentifier", MySql = "varchar(40)", SQLite = "integer", Oracle = "char(40)", PostregSQL = "smallint", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "varbinary", MySql = "varbinary", SQLite = "integer", Oracle = "raw(1-2000)/clob", PostregSQL = "bytea", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "varchar", MySql = "varchar", SQLite = "integer", Oracle = "varchar2(1-4000)/clob", PostregSQL = "varchar", Desc = "" },
-            new DBTypeMappingModel { MSSQL = "xml", MySql = "text", SQLite = "integer", Oracle = "nclob", PostregSQL = "text", Desc = "" }
-        };
-
         /// <summary>
         /// SQL Server的表, 转Mysql建表SQL
         /// </summary>
+        /// <param name="db">目标数据库操作对象</param>
+        /// <param name="connectionString">目标数据库连接字符串</param>
         /// <param name="table">数据表信息</param>
+        /// <param name="isCover">是否覆盖数据库表</param>
         /// <returns>MySQL建表SQL</returns>
-        private string SqlServerTableToMySql(DataTable table, string tableName)
+        private async Task<string> SqlServerTableToMySql(IDBHelper db, string connectionString, DataTable table, string tableName, bool isCover, List<DBTypeMappingModel> mapping)
         {
             var keys = new List<string>();  //保存主键列集合
-            var sqlString = new StringBuilder($@"
-CREATE TABLE `{tableName}`  (
-");
-            foreach (DataRow item in table.Rows)
+            var (sqlString, newTableName) = await this.MySqlCreateTableBefore(db, connectionString, tableName, isCover);
+            var colsString = this.MSSQLTableConvert(table, mapping, DataBaseType.MySQL, (columnName, dataTypeName, mysqlType, isNull, isIdentity, isKey) =>
             {
-                var columnName = item["ColumnName"].ToString();
-                var dataTypeName = item["DataTypeName"].ToString();
-                var newDataTypeName = SqlServerMappingTest.FirstOrDefault(f => f.MSSQL.ToLower() == dataTypeName.ToLower()).MySql;
-                switch (Convert.ToInt32(item["ProviderType"]))
-                {
-                    case 3:     //char
-                    case 12:    //nvarchar
-                    case 22:    //varchar
-                        newDataTypeName += $"({item["ColumnSize"]})"; break;   //表示该字段有一个长度设置, 比如varchar(20)
-                    case 5:     //decimal
-                        newDataTypeName += $"({item["NumericPrecision"]},{item["NumericScale"]})"; break;   //表示该字段有两个个长度设置, decimal(18,2)
-                    default: break;
-                }
-                sqlString.Append($"`{columnName}` {newDataTypeName} {(((bool)item["AllowDBNull"]) ? "NULL" : "NOT NULL")} {(((bool)item["IsIdentity"]) ? "AUTO_INCREMENT" : "")},{Environment.NewLine}");
-                if ((bool)item["IsKey"]) keys.Add(columnName);  //保存主键
-            }
-            sqlString.Append("PRIMARY KEY (");
+                if (isKey) keys.Add(columnName);  //保存主键
+                return $"  `{columnName}` {mysqlType} {(isNull ? "NULL" : "NOT NULL")}{(isIdentity ? " AUTO_INCREMENT" : "")},{Environment.NewLine}";
+            });
+            sqlString.Append(colsString);
+            sqlString.Append("  PRIMARY KEY (");
             foreach (var item in keys)
             {
                 sqlString.Append($"`{item}`,");
@@ -371,6 +384,336 @@ CREATE TABLE `{tableName}`  (
             sqlString = sqlString.Remove(sqlString.Length - 1, 1);
             sqlString.Append($"){Environment.NewLine});");
             return sqlString.ToString();
+        }
+
+        /// <summary>
+        /// 解析MSSQL的数据表信息
+        /// </summary>
+        /// <param name="table">MSSQL的表结构信息</param>
+        /// <param name="mapping">数据库类型映射关系</param>
+        /// <param name="dataBaseType">目标数据库类型</param>
+        /// <param name="colFunc">每列的格式化函数, 有六个参数, 一个返回值
+        /// <para>第一个string参数: columnName --> 列的名称</para>
+        /// <para>第二个string参数: dataTypeName --> 源列数据类型, 如: varchar(30)</para>
+        /// <para>第三个string参数: dbType --> 转换之后的列数据类型, 如: varchar(30)</para>
+        /// <para>第四个bool参数: AllowDBNull --> 列是否可空</para>
+        /// <para>第五个bool参数: IsIdentity --> 列是否是自增列(标识列)</para>
+        /// <para>第六个bool参数: IsKey --> 列是否是主键</para>
+        /// <para>返回值: string --> 格式化之后, 对应目标数据库的建表的列SQL</para>
+        /// </param>
+        /// <returns></returns>
+        private string MSSQLTableConvert(in DataTable table, in List<DBTypeMappingModel> mapping, in DataBaseType dataBaseType, in Func<string, string, string, bool, bool, bool, string> colFunc)
+        {
+            StringBuilder result = new StringBuilder();
+            foreach (DataRow item in table.Rows)
+            {
+                var columnName = item["ColumnName"].ToString();
+                var dataTypeName = item["DataTypeName"].ToString();
+                var mappingRow = mapping.FirstOrDefault(f => f.MSSQL.TrimEnd('(', ',', ')').ToLower().Trim() == dataTypeName.ToLower());
+                if (mappingRow == null) throw new Exception($"找不到源数据库 [{dataTypeName}] 类型的映射设置");
+                var dbType = mappingRow.GetMappingByType(dataBaseType);
+                if (dbType.EndsWith("()")) //表示该类型有一个长度设置, 保持和源数据库长度一致
+                {
+                    dbType = dbType.Insert(dbType.Length - 1, item["ColumnSize"].ToString());
+                }
+                else if (dbType.EndsWith("(,)")) //表示该类型有两个长度设置, 如(10,2)
+                {
+                    dbType = dbType.Insert(dbType.Length - 2, item["NumericPrecision"].ToString());
+                    dbType = dbType.Insert(dbType.Length - 1, item["NumericScale"].ToString());
+                }
+                result.Append(colFunc?.Invoke(columnName, dataTypeName, dbType, (bool)item["AllowDBNull"], (bool)item["IsIdentity"], (bool)item["IsKey"]));
+            }
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// MySql建表前缀
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="connectionString"></param>
+        /// <param name="tableName"></param>
+        /// <param name="isCover"></param>
+        /// <returns></returns>
+        private async Task<(StringBuilder, string)> MySqlCreateTableBefore(IDBHelper db, string connectionString, string tableName, bool isCover)
+        {
+            var sqlString = new StringBuilder();
+            var newTableName = tableName;
+            if (isCover)    //覆盖表, 如果有
+            {
+                sqlString.Append($"DROP TABLE IF EXISTS `{tableName}`;{Environment.NewLine}CREATE TABLE `{tableName}` ({Environment.NewLine}");
+            }
+            else
+            {
+                var isAny = await db.TableAny(connectionString, tableName);
+                if (isAny)
+                {
+                    newTableName = $"{tableName}_{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+                    sqlString.Append($"CREATE TABLE `{newTableName}` ({Environment.NewLine}");
+                }
+                else
+                {
+                    sqlString.Append($"CREATE TABLE `{tableName}` ({Environment.NewLine}");
+                }
+            }
+            return (sqlString, newTableName);
+        }
+
+        /// <summary>
+        /// MSSQL迁移到MySQL
+        /// </summary>
+        /// <param name="yuanDB">源数据库DB</param>
+        /// <param name="yuanConnectionString">源数据库连接字符串</param>
+        /// <param name="mubiaoDB">目标数据库DB</param>
+        /// <param name="mubiaoConnectionString">目标数据库连接字符串</param>
+        /// <param name="table">源数据表信息</param>
+        /// <param name="tableName">表名</param>
+        /// <param name="setting">设置</param>
+        /// <param name="mapping">类型映射信息</param>
+        /// <returns></returns>
+        private async Task<bool> SqlServerToMySql(
+            IDBHelper yuanDB,
+            string yuanConnectionString,
+            IDBHelper mubiaoDB,
+            string mubiaoConnectionString,
+            DataTable table,
+            string tableName,
+            SettingMove setting,
+            List<DBTypeMappingModel> mapping)
+        {
+            int GetColumnNameType(DataTable tableInfo, string colName)
+            {
+                foreach (DataRow item in tableInfo.Rows)
+                {
+                    if (item["ColumnName"].ToString().ToLower() == colName.ToLower())
+                    {
+                        return (int)item["ProviderType"];
+                    }
+                }
+                return -1;
+            }
+
+            var keys = new List<string>();  //保存主键列集合
+            var (sqlString, newTableName) = await this.MySqlCreateTableBefore(mubiaoDB, mubiaoConnectionString, tableName, setting.TableCover);
+            string identityName = string.Empty;
+            List<string> columnNameList = new List<string>();
+            var colsString = this.MSSQLTableConvert(table, mapping, DataBaseType.MySQL, (columnName, dataTypeName, mysqlType, isNull, isIdentity, isKey) =>
+            {
+                columnNameList.Add(columnName);
+                if (isIdentity) identityName = columnName;                          //保存自增列名字
+                if (isKey) keys.Add(columnName);                                    //保存主键
+                return $"  `{columnName}` {mysqlType} {(isNull ? "NULL" : "NOT NULL")},{Environment.NewLine}";
+            });
+            sqlString.Append(colsString);
+            sqlString.Append("  PRIMARY KEY (");
+            foreach (var item in keys)
+            {
+                sqlString.Append($"`{item}`,");
+            }
+            sqlString = sqlString.Remove(sqlString.Length - 1, 1);
+            sqlString.Append($"){Environment.NewLine});");
+            await mubiaoDB.CreateTable(mubiaoConnectionString, sqlString.ToString());
+            if (setting.TableData)
+            {
+                var mubiaoTableInfo = await mubiaoDB.QueryTableInfo(mubiaoConnectionString, newTableName);
+                using (var dataReader = await yuanDB.QueryDataReader(yuanConnectionString, $"SELECT * FROM [{tableName}]"))
+                {
+                    while (dataReader.Read())
+                    {
+                        var insertSqlStirng = new StringBuilder($"INSERT INTO `{newTableName}`(");
+                        var cols = new StringBuilder();
+                        var @params = new List<IDataParameter>();
+                        var colsParams = new StringBuilder();
+                        foreach (var item in columnNameList)
+                        {
+                            var colType = GetColumnNameType(mubiaoTableInfo, item);
+                            cols.Append($"`{item}`,");
+                            colsParams.Append($"@{item},");
+                            @params.Add(new MySqlParameter($"@{item}", dataReader[item]) { MySqlDbType = (MySqlDbType)colType });
+                        }
+                        cols.Remove(cols.Length - 1, 1);
+                        colsParams.Remove(colsParams.Length - 1, 1);
+                        insertSqlStirng.Append($"{cols.ToString()}) VALUES({colsParams.ToString()});");
+                        await mubiaoDB.Insert(mubiaoConnectionString, insertSqlStirng.ToString(), @params);
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(identityName))
+            {
+                await mubiaoDB.CreateTable(mubiaoConnectionString, $"ALTER TABLE `{newTableName}` MODIFY `{identityName}` INT AUTO_INCREMENT;");
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Mysql的表, 转SQL Server建表SQL
+        /// </summary>
+        /// <param name="db">目标数据库操作对象</param>
+        /// <param name="connectionString">目标数据库连接字符串</param>
+        /// <param name="table">数据表信息</param>
+        /// <param name="isCover">是否覆盖数据库表</param>
+        /// <returns>MySQL建表SQL</returns>
+        private async Task<string> MySqlTableToSqlServer(IDBHelper db, string connectionString, DataTable table, string tableName, bool isCover, List<DBTypeMappingModel> mapping)
+        {
+            var (sqlString, newTableName) = await this.MSSQLCreateTableBefore(db, connectionString, tableName, isCover);
+            var colsString = this.MySqlTableConvert(table, mapping, DataBaseType.SQLServer, (columnName, dataTypeName, sqlServerType, isNull, isIdentity, isKey) =>
+            {
+                return $"{Environment.NewLine}  [{columnName}] {sqlServerType} {(isIdentity ? "IDENTITY(1,1)" : "")} {(isNull ? "NULL" : "NOT NULL")}{(isKey ? " PRIMARY KEY" : "")},";
+            });
+            sqlString.Append(colsString);
+            sqlString = sqlString.Remove(sqlString.Length - 1, 1);
+            sqlString.Append($"{Environment.NewLine}){Environment.NewLine}GO");
+            return sqlString.ToString();
+        }
+
+        /// <summary>
+        /// SQL Server建表前缀
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="connectionString"></param>
+        /// <param name="tableName"></param>
+        /// <param name="isCover"></param>
+        /// <returns></returns>
+        private async Task<(StringBuilder, string)> MSSQLCreateTableBefore(IDBHelper db, string connectionString, string tableName, bool isCover)
+        {
+            var sqlString = new StringBuilder();
+            var newTableName = tableName;
+            if (isCover)    //覆盖表, 如果有
+            {
+                sqlString.Append($@"IF EXISTS (SELECT * FROM sys.all_objects WHERE object_id = OBJECT_ID(N'[dbo].[{tableName}]') AND type IN ('U'))
+	DROP TABLE [dbo].[{tableName}]
+CREATE TABLE [dbo].[{tableName}] (");
+            }
+            else
+            {
+                var isAny = await db.TableAny(connectionString, tableName);
+                if (isAny)
+                {
+                    newTableName = $"{tableName}_{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+                    sqlString.Append($"CREATE TABLE [dbo].[{newTableName}] (");
+                }
+                else
+                {
+                    sqlString.Append($"CREATE TABLE [dbo].[{tableName}] (");
+                }
+            }
+            return (sqlString, newTableName);
+        }
+
+        /// <summary>
+        /// 解析MySql的数据表信息
+        /// </summary>
+        /// <param name="table">MySql的表结构信息</param>
+        /// <param name="mapping">数据库类型映射关系</param>
+        /// <param name="dataBaseType">目标数据库类型</param>
+        /// <param name="colFunc">每列的格式化函数, 有六个参数, 一个返回值
+        /// <para>第一个string参数: columnName --> 列的名称</para>
+        /// <para>第二个string参数: dataTypeName --> 源列数据类型, 如: varchar(30)</para>
+        /// <para>第三个string参数: dbType --> 转换之后的列数据类型, 如: varchar(30)</para>
+        /// <para>第四个bool参数: AllowDBNull --> 列是否可空</para>
+        /// <para>第五个bool参数: IsIdentity --> 列是否是自增列(标识列)</para>
+        /// <para>第六个bool参数: IsKey --> 列是否是主键</para>
+        /// <para>返回值: string --> 格式化之后, 对应目标数据库的建表的列SQL</para>
+        /// </param>
+        /// <returns></returns>
+        private string MySqlTableConvert(in DataTable table, in List<DBTypeMappingModel> mapping, in DataBaseType dataBaseType, in Func<string, string, string, bool, bool, bool, string> colFunc)
+        {
+            StringBuilder result = new StringBuilder();
+            foreach (DataRow item in table.Rows)
+            {
+                var columnName = item["ColumnName"].ToString();
+                var dataTypeName = item["DataTypeName"].ToString();
+                var mappingRow = mapping.FirstOrDefault(f => f.MySql.TrimEnd('(', ',', ')').ToLower().Trim() == dataTypeName.ToLower());
+                if (mappingRow == null) throw new Exception($"找不到源数据库 [{dataTypeName}] 类型的映射设置");
+                var dbType = mappingRow.GetMappingByType(dataBaseType);
+                if (dbType.EndsWith("()")) //表示该类型有一个长度设置, 保持和源数据库长度一致
+                {
+                    dbType = dbType.Insert(dbType.Length - 1, item["ColumnSize"].ToString());
+                }
+                else if (dbType.EndsWith("(,)")) //表示该类型有两个长度设置, 如(10,2)
+                {
+                    dbType = dbType.Insert(dbType.Length - 2, item["NumericPrecision"].ToString());
+                    dbType = dbType.Insert(dbType.Length - 1, item["NumericScale"].ToString());
+                }
+                result.Append(colFunc?.Invoke(columnName, dataTypeName, dbType, (bool)item["AllowDBNull"], (bool)item["IsAutoIncrement"], (bool)item["IsKey"]));
+            }
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// MySQL迁移到MSSQL
+        /// </summary>
+        /// <param name="yuanDB">源数据库DB</param>
+        /// <param name="yuanConnectionString">源数据库连接字符串</param>
+        /// <param name="mubiaoDB">目标数据库DB</param>
+        /// <param name="mubiaoConnectionString">目标数据库连接字符串</param>
+        /// <param name="table">源数据表信息</param>
+        /// <param name="tableName">表名</param>
+        /// <param name="setting">设置</param>
+        /// <param name="mapping">类型映射信息</param>
+        /// <returns></returns>
+        private async Task<bool> MySqlToSqlServer(
+            IDBHelper yuanDB,
+            string yuanConnectionString,
+            IDBHelper mubiaoDB,
+            string mubiaoConnectionString,
+            DataTable table,
+            string tableName,
+            SettingMove setting,
+            List<DBTypeMappingModel> mapping)
+        {
+            int GetColumnNameType(DataTable tableInfo, string colName)
+            {
+                foreach (DataRow item in tableInfo.Rows)
+                {
+                    if (item["ColumnName"].ToString().ToLower() == colName.ToLower())
+                    {
+                        return (int)item["ProviderType"];
+                    }
+                }
+                return -1;
+            }
+
+            var keys = new List<string>();  //保存主键列集合
+            var (sqlString, newTableName) = await this.MSSQLCreateTableBefore(mubiaoDB, mubiaoConnectionString, tableName, setting.TableCover);
+            string identityName = string.Empty;
+            List<string> columnNameList = new List<string>();
+            var colsString = this.MySqlTableConvert(table, mapping, DataBaseType.MySQL, (columnName, dataTypeName, sqlServerType, isNull, isIdentity, isKey) =>
+            {
+                columnNameList.Add(columnName);
+                if (isIdentity) identityName = columnName;                          //保存自增列名字
+                if (isKey) keys.Add(columnName);                                    //保存主键
+                return $"{Environment.NewLine}  [{columnName}] {sqlServerType} {(isIdentity ? "IDENTITY(1,1)" : "")} {(isNull ? "NULL" : "NOT NULL")}{(isKey ? " PRIMARY KEY" : "")},";
+            });
+            sqlString.Append(colsString);
+            sqlString = sqlString.Remove(sqlString.Length - 1, 1);
+            sqlString.Append($"{Environment.NewLine})");
+            await mubiaoDB.CreateTable(mubiaoConnectionString, sqlString.ToString());
+            if (setting.TableData)
+            {
+                var mubiaoTableInfo = await mubiaoDB.QueryTableInfo(mubiaoConnectionString, newTableName);
+                using (var dataReader = await yuanDB.QueryDataReader(yuanConnectionString, $"SELECT * FROM `{tableName}`"))
+                {
+                    while (dataReader.Read())
+                    {
+                        var insertSqlStirng = new StringBuilder($"SET IDENTITY_INSERT [dbo].[{newTableName}] ON;{Environment.NewLine}INSERT INTO [dbo].[{newTableName}](");
+                        var cols = new StringBuilder();
+                        var @params = new List<IDataParameter>();
+                        var colsParams = new StringBuilder();
+                        foreach (var item in columnNameList)
+                        {
+                            var colType = GetColumnNameType(mubiaoTableInfo, item);
+                            cols.Append($"[{item}],");
+                            colsParams.Append($"@{item},");
+                            @params.Add(new SqlParameter($"@{item}", dataReader[item]) { SqlDbType = (SqlDbType)colType });
+                        }
+                        cols.Remove(cols.Length - 1, 1);
+                        colsParams.Remove(colsParams.Length - 1, 1);
+                        insertSqlStirng.Append($"{cols.ToString()}) VALUES({colsParams.ToString()});{Environment.NewLine}SET IDENTITY_INSERT [dbo].[{newTableName}] OFF;");
+                        await mubiaoDB.Insert(mubiaoConnectionString, insertSqlStirng.ToString(), @params);
+                    }
+                }
+            }
+            return true;
         }
     }
 }

@@ -97,7 +97,7 @@ namespace SqlSugar.Tools
                     {
                         var tables = await this.LoadingTables(linkString, DataBaseType.SQLServer);
                         tables.Columns["TableName"].ColumnName = "label";
-                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "").Replace("\\", "\\\\");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -545,7 +545,7 @@ namespace SqlSugar.Tools
                     {
                         var tables = await this.LoadingTables(linkString, DataBaseType.MySQL);
                         tables.Columns["TableName"].ColumnName = "label";
-                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "").Replace("\\", "\\\\");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -759,7 +759,7 @@ namespace SqlSugar.Tools
                         var tables = await this.LoadingTables(linkString, DataBaseType.PostgreSQL);
                         tables.Columns["TableName"].ColumnName = "label";
                         tables.Columns["tabledesc"].ColumnName = "TableDesc";
-                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "").Replace("\\", "\\\\");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }
@@ -973,7 +973,7 @@ namespace SqlSugar.Tools
                         var tables = await this.LoadingTables(linkString, DataBaseType.Oracler);
                         tables.Columns["TableName"].ColumnName = "label";
                         tables.Columns["tabledesc"].ColumnName = "TableDesc";
-                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "");
+                        var tablesJson = JsonConvert.SerializeObject(tables).Replace("\r\n", "").Replace("\\r\\n", "").Replace("\\", "\\\\");
                         tables.Clear(); tables.Dispose(); tables = null;
                         EvaluateJavascript($"setTables('{tablesJson}')", (value, exception) => { });
                     }

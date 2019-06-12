@@ -102,5 +102,46 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
                 return await cmd.ExecuteNonQueryAsync();
             }
         }
+
+        public async Task<bool> TableAny(string connectionString, string tableName)
+        {
+            this.NewConnectionMethod(connectionString);
+            using (this._Con)
+            using (SqlCommand cmd = new SqlCommand($"select count(1) from sysobjects where id = object_id('[{tableName}]')", this._Con))
+            {
+                this._Con.Open();
+                return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
+            }
+        }
+
+        public async Task<IDataReader> QueryDataReader(string connectionString, string querySql)
+        {
+            this.NewConnectionMethod(connectionString);
+            using (SqlCommand cmd = new SqlCommand(querySql, this._Con))
+            {
+                this._Con.Open();
+                return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+            }
+        }
+
+        public async Task<int> Insert(string connectionString, string insertSql, List<IDataParameter> @params)
+        {
+            this.NewConnectionMethod(connectionString);
+            using (this._Con)
+            using (SqlCommand cmd = new SqlCommand(insertSql, this._Con))
+            {
+                if (@params?.Count > 0)
+                {
+                    foreach (var item in @params)
+                    {
+                        cmd.Parameters.Add(item as SqlParameter);
+                    }
+                }
+                this._Con.Open();
+                var result = await cmd.ExecuteNonQueryAsync();
+                cmd.Parameters.Clear();
+                return result;
+            }
+        }
     }
 }

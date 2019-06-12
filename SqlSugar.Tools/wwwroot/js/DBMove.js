@@ -187,8 +187,9 @@ const vue = new Vue({
             settingObj: {
                 tableData: false,
                 tableCover: false,
-                tableAny: false,
-                dataRows: 500
+                tableAny: true,
+                dataRows: 500,
+                onlySql: false
             },
             selectTables: []
         };
@@ -199,6 +200,12 @@ const vue = new Vue({
         },
         mubiaoTableDataSearch(val) {
             this.mubiaoTableDataSearchFunc();
+        },
+        'settingObj.tableCover': (val, oldval) => {
+            vue.settingObj.tableAny = oldval;
+        },
+        'settingObj.tableAny': (val, oldval) => {
+            vue.settingObj.tableCover = oldval;
         }
     },
     methods: {
@@ -422,7 +429,11 @@ const vue = new Vue({
         },
         startMoveFunc() {
             if (this.selectTables && this.selectTables.length > 0) {
-                move.startMove(JSON.stringify(this.selectTables), this.selectYuanDB.dbType, this.selectYuanDB.linkString, this.selectMubiaoDB.dbType, this.selectMubiaoDB.linkString);
+                this.loading = true;
+                const settingJson = JSON.stringify(this.settingObj);
+                getLocalConfig();
+                const mappingJson = JSON.stringify(defaultConfig);
+                move.startMove(JSON.stringify(this.selectTables), this.selectYuanDB.dbType, this.selectYuanDB.linkString, this.selectMubiaoDB.dbType, this.selectMubiaoDB.linkString, settingJson, mappingJson);
             } else {
                 this.$notify({
                     title: '迁移提示',
@@ -443,6 +454,19 @@ const vue = new Vue({
         if (mySqlLinkInfo) {
             this.MySqlForm = JSON.parse(mySqlLinkInfo);
             this.MySqlForm.db = '';
+        }
+
+        const dbmovaeTip = localStorage.getItem('dbmovae-key');
+        if (!dbmovaeTip) {
+            this.$notify({
+                title: '使用提示',
+                message: '初次使用前, 请点击左边导航栏的第四个按钮, 进行类型映射设置, 否则迁移可能会失败, 谢谢配合',
+                type: 'warning',
+                duration: 0,
+                onClose: () => {
+                    localStorage.setItem('dbmovae-key', '1');
+                }
+            });
         }
     }
 });
@@ -467,4 +491,12 @@ function setDbList(json) {
 function setTables(json, propName) {
     vue[propName] = JSON.parse(json);
     vue[propName + 'Old'] = JSON.parse(json);
+}
+
+function hideLoadingSuccess(msg) {
+    vue.loading = false;
+    vue.$message({
+        message: msg,
+        type: 'success'
+    });
 }

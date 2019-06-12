@@ -47,5 +47,30 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
         /// <param name="sqlString">建表SQL语句</param>
         /// <returns></returns>
         Task<int> CreateTable(string connectionString, string sqlString);
+
+        /// <summary>
+        /// 判断表是否存在
+        /// </summary>
+        /// <param name="connectionString">连接字符串</param>
+        /// <param name="tableName">表名</param>
+        /// <returns></returns>
+        Task<bool> TableAny(string connectionString, string tableName);
+
+        /// <summary>
+        /// 执行查询SQL, 返回IDataReader
+        /// </summary>
+        /// <param name="connectionString">连接字符串</param>
+        /// <param name="querySql">查询SQL</param>
+        /// <returns></returns>
+        Task<IDataReader> QueryDataReader(string connectionString, string querySql);
+
+        /// <summary>
+        /// 插入数据
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="insertSql"></param>
+        /// <param name="params"></param>
+        /// <returns></returns>
+        Task<int> Insert(string connectionString, string insertSql, List<IDataParameter> @params);
     }
 }

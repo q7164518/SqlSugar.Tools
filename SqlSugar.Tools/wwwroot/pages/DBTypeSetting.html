@@ -14,6 +14,22 @@
         .el-table .warning-row {
             background: #f0f9eb;
         }
+        .el-table__header-wrapper table thead tr th, .el-table__fixed-header-wrapper table thead tr th,.el-table__fixed-right-patch{
+            background:#2E3238 !important;
+            border:none;
+            color:#FFF;
+        }
+        .el-table--border{
+            border:none
+        }
+        .left-title1 {
+            writing-mode: vertical-lr;
+            color: #FFF;
+            position: fixed;
+            left: 9px;
+            bottom: 10px;
+            margin: auto;
+        }
     </style>
 </head>
 <body>
@@ -28,21 +44,140 @@
             <el-tooltip class="item" effect="dark" content="最小化" placement="right">
                 <el-button n-ui-command="minimize" style="top:110px" class="tool-btn" icon="el-icon-minus" circle size="small"></el-button>
             </el-tooltip>
+            <el-popover placement="bottom" trigger="click">
+                <div style="padding-bottom:5px;">
+                    <span>搜索的数据库: </span>
+                    <el-radio-group v-model="searchDB" size="small">
+                        <el-radio-button label="MSSQL"></el-radio-button>
+                        <el-radio-button label="MySql"></el-radio-button>
+                        <el-radio-button label="SQLite"></el-radio-button>
+                        <el-radio-button label="Oracle"></el-radio-button>
+                        <el-radio-button label="PostregSQL"></el-radio-button>
+                    </el-radio-group>
+                </div>
+                <el-input placeholder="请输入类型搜索(模糊)" v-model="searchType" class="input-with-select"></el-input>
+                <el-tooltip slot="reference" class="item" effect="dark" content="搜索源类型" placement="right">
+                    <el-button style="top:160px" class="tool-btn" icon="el-icon-search" circle size="small"></el-button>
+                </el-tooltip>
+            </el-popover>
+            <el-popover placement="bottom" trigger="click">
+                <div>
+                    <el-button @click="edit = true" type="warning" icon="el-icon-edit-outline" size="small">编辑模式</el-button>
+                    <el-button @click="escEdit" type="danger" icon="el-icon-error" size="small">退出编辑模式</el-button>
+                    <el-button @click="saveConfig" type="success" icon="el-icon-success" size="small">保存编辑</el-button>
+                    <el-button @click="dialogVisible = true" type="primary" icon="el-icon-circle-plus" size="small">添加映射</el-button>
+                </div>
+                <el-tooltip slot="reference" class="item" effect="dark" content="编辑映射关系" placement="right">
+                    <el-button style="top:210px" class="tool-btn" icon="el-icon-setting" circle size="small"></el-button>
+                </el-tooltip>
+            </el-popover>
+            <el-popover placement="bottom" trigger="click">
+                <div>
+                    <p>1. 本设置映射了SqlSugar ORM支持的五种数据库的各个类型映射, 方便进行无缝的数据库移植.</p>
+                    <p>2. 初次使用为默认映射关系, 可能不适合每个用户使用, 所以需要各位使用者点击上面的按钮进行修改和新增映射关系.</p>
+                    <p>3. 如果你的数据库表没有使用到某个类型, 建议点击后面的删除, 保障迁移的正常. </p>
+                    <p>4. 删除依据根据源数据库表的类型判断, 如是MSSQL迁移到MySql, MSSQL没有使用bit类型, 就可以搜索MSSQL的bit进行删除.</p>
+                    <p>5. 本设置支持一对多映射, 比如Oracle里面的char(1-2000)/varchar2(2001-4000)/clob, 则表示源数据库的类型长度在1-2000时迁移为Oracle的char类型, char的长度和源数据库保持一致, 以此类推.</p>
+                    <p>6. 迁移数据库是两个不同类型的数据库间进行的, 如从MSSQL迁移到MySql, 则只需要设置MSSQL和MySql的关系即可, 别的可以不设置, 用的时候再设置.</p>
+                    <p>7. 本设置默认的配置是以MSSQL为源数据库针对其它四个数据库进行迁移的设置, 如果需要其它迁移, 请以对应的源数据库为准备进行类型映射设置.</p>
+                    <p>8. 本工具后期会新增在线搜索类型映射关系功能 (届时大部分清空将无需自行配置), 暂时资金紧缺, 将不包涵该功能, 还希望各位使用者自行设置映射关系, 谢谢配合.</p>
+                </div>
+                <el-tooltip slot="reference" class="item" effect="dark" content="使用说明" placement="right">
+                    <el-button style="top:260px" class="tool-btn" icon="el-icon-question" circle size="small"></el-button>
+                </el-tooltip>
+            </el-popover>
         </div>
-        <div id="td">
-            <p class="left-title" style="height:225px">数 据 库 字 段 类 型 映 射 设 置</p>
+        <div id="td" style="top:295px;">
+            <p class="left-title1" style="height:225px">数 据 库 字 段 类 型 映 射 设 置</p>
         </div>
         <div style="width:100%;height:2px;background:#2E3238"></div>
         <div style="width:calc(100% - 40px);height:100%;position:fixed;top:0;bottom:0;left:40px;right:0;margin:auto;">
             <el-table :data="tableData" style="width: 100%" border :row-class-name="tableRowClassName" height="100%">
-                <el-table-column prop="MSSQL" label="SQL Server类型" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="MySql" label="对应MySql" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="SQLite" label="对应SQLite" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="Oracle" label="对应Oracle" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="PostregSQL" label="对应PostregSQL" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="Desc" label="说明" show-overflow-tooltip></el-table-column>
+                <el-table-column label="SQL Server类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].MSSQL"></el-input>
+                        <span v-else>{{scope.row.MSSQL}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="MySql类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].MySql"></el-input>
+                        <span v-else>{{scope.row.MySql}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="SQLite类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].SQLite"></el-input>
+                        <span v-else>{{scope.row.SQLite}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="Oracle类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].Oracle"></el-input>
+                        <span v-else>{{scope.row.Oracle}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="PostregSQL类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].PostregSQL"></el-input>
+                        <span v-else>{{scope.row.PostregSQL}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="说明" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input v-if="edit === true" v-model="tableData[scope.$index].Desc"></el-input>
+                        <span v-else>{{scope.row.Desc}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="功能" fixed="right" width="95">
+                    <template slot-scope="scope">
+                        <el-button @click="deleteConfig(scope.row.ID)" size="mini" type="danger" icon="el-icon-close">删除</el-button>
+                    </template>
+                </el-table-column>
             </el-table>
         </div>
+
+        <el-dialog title="添加映射关系" :visible.sync="dialogVisible" :close-on-click-modal="false" width="80%" top="50px" @closed="dialogClosed">
+            <el-table :data="addedTable" style="width: 100%" border :row-class-name="tableRowClassName" height="400px">
+                <el-table-column type="index" width="50"></el-table-column>
+                <el-table-column label="SQL Server类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入数据库类型" v-model="addedTable[scope.$index].MSSQL"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column label="MySql类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入数据库类型" v-model="addedTable[scope.$index].MySql"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column label="SQLite类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入数据库类型" v-model="addedTable[scope.$index].SQLite"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column label="Oracle类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入数据库类型" v-model="addedTable[scope.$index].Oracle"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column label="PostregSQL类型" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入数据库类型" v-model="addedTable[scope.$index].PostregSQL"></el-input>
+                    </template>
+                </el-table-column>
+                <el-table-column label="说明" show-overflow-tooltip>
+                    <template slot-scope="scope">
+                        <el-input placeholder="请输入说明, 可以不输入" v-model="addedTable[scope.$index].Desc"></el-input>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <span slot="footer">
+                <el-button size="mini" icon="el-icon-error" type="info" @click="dialogVisible = false">取 消</el-button>
+                <el-button size="mini" icon="el-icon-minus" type="danger" @click="removeTableRow">移除最后一行</el-button>
+                <el-button size="mini" icon="el-icon-plus" type="warning" @click="addedTableRow">添加一行</el-button>
+                <el-button size="mini" icon="el-icon-success" type="success" @click="saveAddedConfig">保 存</el-button>
+            </span>
+        </el-dialog>
     </div>
 </body>
 </html>
@@ -55,7 +190,23 @@
         data() {
             return {
                 loading: false,
-                tableData: sqlServerTo
+                tableData: defaultConfig,
+                defaultConfig: JSON.stringify(defaultConfig),
+                searchType: '',
+                searchDB: 'MSSQL',
+                edit: false,
+                dialogVisible: false,
+                addedTable: [
+                    { MSSQL: '', MySql: '', SQLite: '', Oracle: '', PostregSQL: '', Desc: '' }
+                ]
+            }
+        },
+        watch: {
+            searchType() {
+                this.searchTypeFunc();
+            },
+            searchDB() {
+                this.searchTypeFunc();
             }
         },
         methods: {
@@ -64,7 +215,80 @@
                     return 'warning-row';
                 }
                 return '';
+            },
+            searchTypeFunc() {
+                if (this.searchType) {
+                    this.tableData = defaultConfig.filter(val => val[this.searchDB].toLowerCase().indexOf(this.searchType.toLowerCase()) >= 0);
+                } else {
+                    this.tableData = defaultConfig;
+                }
+            },
+            escEdit() {
+                this.tableData = JSON.parse(this.defaultConfig);
+                this.edit = false;
+                this.searchType = '';
+            },
+            addedTableRow() {
+                this.addedTable.push({ MSSQL: '', MySql: '', SQLite: '', Oracle: '', PostregSQL: '', Desc: '' });
+            },
+            removeTableRow() {
+                if (this.addedTable.length > 1) {
+                    this.addedTable.pop();
+                }
+            },
+            saveConfig() {
+                if (this.edit === false) return;
+                this.tableData.forEach(val => {
+                    const index = defaultConfig.findIndex(i => i.ID === val.ID);
+                    defaultConfig[index] = val;
+                });
+                this.edit = false;
+                setLocalConfig();
+                this.searchType = '';
+                this.$message({
+                    message: '编辑成功',
+                    type: 'success'
+                });
+            },
+            dialogClosed() {
+                this.addedTable = [
+                    { MSSQL: '', MySql: '', SQLite: '', Oracle: '', PostregSQL: '', Desc: '' }
+                ];
+            },
+            saveAddedConfig() {
+                this.addedTable.forEach(val => {
+                    let maxid = defaultConfig[defaultConfig.length - 1].ID;   //获得最后的ID
+                    maxid++;
+                    defaultConfig.push({ ID: maxid, ...val });
+                });
+                this.dialogVisible = false;
+                setLocalConfig();
+                this.$message({
+                    message: '添加映射成功',
+                    type: 'success'
+                });
+                this.searchType = '';
+            },
+            deleteConfig(id) {
+                const _this = this;
+                this.$confirm('你确定删除该组配置吗? 此操作可能会影响数据库迁移, 删除前请确定你不需要此组设置, 继续吗?', '删除配置提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    const index = defaultConfig.findIndex(i => i.ID == id);
+                    if (index >= 0) {
+                        defaultConfig.splice(index, 1);
+                        setLocalConfig();
+                        _this.$message({
+                            message: '删除成功',
+                            type: 'success'
+                        });
+                        _this.searchType = '';
+                    }
+                }).catch(() => {
+                });
             }
         }
-    })
+    });
 </script>
