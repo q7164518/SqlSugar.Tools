@@ -152,6 +152,7 @@
       <DependentUpon>DBMove.cs</DependentUpon>
     </Compile>
     <Compile Include="DBMoveTools\DBHelper\MySqlDBHelper.cs" />
+    <Compile Include="DBMoveTools\DBHelper\PostgreSQLDBHelper.cs" />
     <Compile Include="DBMoveTools\DBHelper\SqlServerDBHelper.cs" />
     <Compile Include="DBTypeSetting.cs">
       <SubType>Form</SubType>

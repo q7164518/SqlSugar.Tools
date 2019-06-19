@@ -168,9 +168,12 @@
                             <el-form-item label="连接数据库: " prop="db">
                                 <el-input v-model="PGSqlForm.db" placeholder="请输入要连接的数据库"></el-input>
                             </el-form-item>
+                            <el-form-item label="支持自增列: " prop="db">
+                                <el-checkbox v-model="PGSqlForm.identity">是否支持Identity (自增), 如是版本低于10, 请不要勾选</el-checkbox>
+                            </el-form-item>
                             <el-form-item>
-                                <el-button type="success" style="width:48%" icon="el-icon-refresh">测试连接</el-button>
-                                <el-button type="danger" style="width:48%;float:right" icon="el-icon-check">下一步</el-button>
+                                <el-button @click="testpgsqlLingk" type="success" style="width:48%" icon="el-icon-refresh">测试连接</el-button>
+                                <el-button @click="selectPGSQLDB" type="danger" style="width:48%;float:right" icon="el-icon-check">下一步</el-button>
                             </el-form-item>
                         </el-form>
                     </div>

@@ -1,5 +1,6 @@
 ﻿const sqlServerLinkInfoKey = "SQL_SERVER_LINK_INFO_KEY";
 const mySqlLinkInfoKey = "MY_SQL_LINK_INFO_KEY";
+const pgsqlLinkInfoKey = "PG_SQL_LINK_INFO_KEY";
 
 function setItem(key, value) {
     window.localStorage.setItem(key, value);
@@ -65,7 +66,7 @@ const vue = new Vue({
             loading: false,
             activeIndex: 0,
             dbType: 0,
-            dbName: ['SqlServer', 'MySQL', 'SQLite', 'Oracle', 'PostregSQL'],
+            dbName: ['SqlServer', 'MySQL', 'SQLite', 'Oracle', 'PostgreSQL'],
             SQLServerForm: {
                 host: '',
                 linkType: 'db',
@@ -149,7 +150,8 @@ const vue = new Vue({
                 port: '5432',
                 account: '',
                 pwd: '',
-                db: ''
+                db: '',
+                identity: true
             },
             PGSqlFormRules: {
                 host: [
@@ -280,6 +282,17 @@ const vue = new Vue({
                 }
             });
         },
+        testpgsqlLingk() {
+            this.$refs['PGSqlForm'].validate((valid) => {
+                if (valid) {
+                    this.loading = true;
+                    const json = JSON.stringify(this.PGSqlForm);
+                    setItem(pgsqlLinkInfoKey, json);
+                    let linkString = `Host=${this.PGSqlForm.host};Port=${this.PGSqlForm.port};Username=${this.PGSqlForm.account};Password=${this.PGSqlForm.pwd};Database=${this.PGSqlForm.db};`;
+                    pgsql.testLink(linkString);
+                }
+            });
+        },
         selectSqlServerDB() {
             if (!this.testIsSuccess) {
                 this.$message({
@@ -355,6 +368,34 @@ const vue = new Vue({
                 }
             });
         },
+        selectPGSQLDB() {
+            if (!this.testIsSuccess) {
+                this.$message({
+                    message: '请先测试连接',
+                    type: 'warning'
+                });
+                return;
+            }
+            this.$refs['PGSqlForm'].validate((valid) => {
+                if (valid) {
+                    let linkString = `Host=${this.PGSqlForm.host};Port=${this.PGSqlForm.port};Username=${this.PGSqlForm.account};Password=${this.PGSqlForm.pwd};Database=${this.PGSqlForm.db};`;
+                    if (this.activeIndex === 0) {
+                        this.selectYuanDB.dbType = 'PostgreSQL';
+                        this.selectYuanDB.linkString = linkString;
+                        this.activeIndex = 1;
+                        this.dbRadio = 'SqlServer';
+                        this.dbType = 0;
+                        this.dbList = [];
+                        this.testIsSuccess = false;
+                    } else if (this.activeIndex === 1) {
+                        this.selectMubiaoDB.dbType = 'PostgreSQL';
+                        this.selectMubiaoDB.linkString = linkString;
+                        this.activeIndex = 2;
+                        this.testIsSuccess = false;
+                    }
+                }
+            });
+        },
         toStpe1() {
             this.dbRadio = 'SqlServer';
             this.dbType = 0;
@@ -393,6 +434,8 @@ const vue = new Vue({
                 objName = sqlServer;
             } else if (this.selectYuanDB.dbType === 'MySQL') {
                 objName = mysql;
+            } else if (this.selectYuanDB.dbType === 'PostgreSQL') {
+                objName = pgsql;
             }
             this.loading = true;
             objName.loadingTables(this.selectYuanDB.linkString, true);
@@ -403,6 +446,8 @@ const vue = new Vue({
                 objName = sqlServer;
             } else if (this.selectMubiaoDB.dbType === 'MySQL') {
                 objName = mysql;
+            } else if (this.selectMubiaoDB.dbType === 'PostgreSQL') {
+                objName = pgsql;
             }
             this.loading = true;
             objName.loadingTables(this.selectMubiaoDB.linkString, false);
@@ -433,7 +478,7 @@ const vue = new Vue({
                 const settingJson = JSON.stringify(this.settingObj);
                 getLocalConfig();
                 const mappingJson = JSON.stringify(defaultConfig);
-                move.startMove(JSON.stringify(this.selectTables), this.selectYuanDB.dbType, this.selectYuanDB.linkString, this.selectMubiaoDB.dbType, this.selectMubiaoDB.linkString, settingJson, mappingJson);
+                move.startMove(JSON.stringify(this.selectTables), this.selectYuanDB.dbType, this.selectYuanDB.linkString, this.selectMubiaoDB.dbType, this.selectMubiaoDB.linkString, settingJson, mappingJson, this.PGSqlForm.identity);
             } else {
                 this.$notify({
                     title: '迁移提示',
@@ -454,6 +499,11 @@ const vue = new Vue({
         if (mySqlLinkInfo) {
             this.MySqlForm = JSON.parse(mySqlLinkInfo);
             this.MySqlForm.db = '';
+        }
+
+        const pgsqlLinkInfo = getItem(pgsqlLinkInfoKey);
+        if (pgsqlLinkInfo) {
+            this.PGSqlForm = JSON.parse(pgsqlLinkInfo);
         }
 
         const dbmovaeTip = localStorage.getItem('dbmovae-key');

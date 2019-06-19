@@ -53,7 +53,7 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
             {
                 try
                 {
-                    this._Con.Open();
+                    await this._Con.OpenAsync();
                     using (SqlDataReader sdr = await cmd.ExecuteReaderAsync(CommandBehavior.KeyInfo))
                     {
                         dt = sdr.GetSchemaTable();  //获得表的结构
@@ -98,7 +98,7 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
             using (this._Con)
             using (SqlCommand cmd = new SqlCommand(sqlString, this._Con))
             {
-                this._Con.Open();
+                await this._Con.OpenAsync();
                 return await cmd.ExecuteNonQueryAsync();
             }
         }
@@ -109,7 +109,7 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
             using (this._Con)
             using (SqlCommand cmd = new SqlCommand($"select count(1) from sysobjects where id = object_id('[{tableName}]')", this._Con))
             {
-                this._Con.Open();
+                await this._Con.OpenAsync();
                 return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
             }
         }
@@ -119,7 +119,7 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
             this.NewConnectionMethod(connectionString);
             using (SqlCommand cmd = new SqlCommand(querySql, this._Con))
             {
-                this._Con.Open();
+                await this._Con.OpenAsync();
                 return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
             }
         }
@@ -137,11 +137,16 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
                         cmd.Parameters.Add(item as SqlParameter);
                     }
                 }
-                this._Con.Open();
+                await this._Con.OpenAsync();
                 var result = await cmd.ExecuteNonQueryAsync();
                 cmd.Parameters.Clear();
                 return result;
             }
+        }
+
+        public Task<long> QueryMaxID(string connectionString, string tableName, string colName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

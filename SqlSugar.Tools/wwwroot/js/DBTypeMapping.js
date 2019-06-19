@@ -28,7 +28,7 @@
     "MySql": "char()",
     "SQLite": "integer",
     "Oracle": "char(1-2000)/varchar2(2001-4000)/clob",
-    "PostregSQL": "char",
+    "PostregSQL": "char()",
     "Desc": ""
 }, {
     "ID": 5,
@@ -68,7 +68,7 @@
     "MySql": "decimal(,)",
     "SQLite": "integer",
     "Oracle": "number(,)",
-    "PostregSQL": "numeric",
+    "PostregSQL": "decimal(,)",
     "Desc": ""
 }, {
     "ID": 10,
@@ -100,7 +100,7 @@
     "MySql": "char()",
     "SQLite": "integer",
     "Oracle": "char(1-1000)/nclob",
-    "PostregSQL": "varchar",
+    "PostregSQL": "varchar()",
     "Desc": ""
 }, {
     "ID": 14,
@@ -116,7 +116,7 @@
     "MySql": "decimal(,)",
     "SQLite": "integer",
     "Oracle": "number",
-    "PostregSQL": "numeric",
+    "PostregSQL": "decimal(,)",
     "Desc": ""
 }, {
     "ID": 16,
@@ -124,7 +124,7 @@
     "MySql": "varchar()",
     "SQLite": "integer",
     "Oracle": "varchar2(1-2000)/nclob",
-    "PostregSQL": "varchar",
+    "PostregSQL": "varchar()",
     "Desc": ""
 }, {
     "ID": 17,
@@ -172,7 +172,7 @@
     "MySql": "time",
     "SQLite": "integer",
     "Oracle": "varchar(16)",
-    "PostregSQL": "timestamp",
+    "PostregSQL": "time()",
     "Desc": ""
 }, {
     "ID": 23,
@@ -212,7 +212,7 @@
     "MySql": "varchar()",
     "SQLite": "integer",
     "Oracle": "varchar2(1-4000)/clob",
-    "PostregSQL": "varchar",
+    "PostregSQL": "varchar()",
     "Desc": ""
 }, {
     "ID": 28,
@@ -232,6 +232,11 @@ function setLocalConfig() {
 
 /** 读取本地缓存的配置, 如果没有, 则用defaultConfig默认配置 */
 function getLocalConfig() {
+    const isOld = window.localStorage.getItem('olddefaultConfigKey');
+    if (!isOld) {
+        window.localStorage.setItem('olddefaultConfigKey', '1');
+        setLocalConfig();
+    }
     const localConfig = window.localStorage.getItem(defaultConfigKey);
     if (localConfig) {
         defaultConfig = JSON.parse(localConfig);

@@ -72,5 +72,14 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
         /// <param name="params"></param>
         /// <returns></returns>
         Task<int> Insert(string connectionString, string insertSql, List<IDataParameter> @params);
+
+        /// <summary>
+        /// 根据表名, 查询最大的ID, 设置标识列用
+        /// </summary>
+        /// <param name="connectionString">连接字符串</param>
+        /// <param name="tableName">表名</param>
+        /// <param name="colName">标识列名称</param>
+        /// <returns></returns>
+        Task<long> QueryMaxID(string connectionString, string tableName, string colName);
     }
 }

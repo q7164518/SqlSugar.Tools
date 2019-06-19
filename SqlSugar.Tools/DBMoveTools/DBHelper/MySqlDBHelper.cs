@@ -195,5 +195,10 @@ namespace SqlSugar.Tools.DBMoveTools.DBHelper
                 }
             });
         }
+
+        public Task<long> QueryMaxID(string connectionString, string tableName, string colName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

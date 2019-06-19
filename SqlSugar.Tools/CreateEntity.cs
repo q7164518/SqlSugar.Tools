@@ -1239,7 +1239,7 @@ FROM
 	pg_class t1
 	LEFT JOIN pg_tables t2 ON t1.relname = t2.tablename 
 WHERE
-	t2.tableowner != 'postgres' 
+	t2.schemaname = 'public'
 ORDER BY
 	t1.relname ASC";
                     return await PostgreSqlHelper.QueryDataTable(linkString, sql2);
