@@ -94,7 +94,7 @@
                     </div>
                 </div>
             </el-col>
-            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col">
+            <el-col :xs="12" :sm="12" :lg="6" class="card-panel-col" onclick="showPay()">
                 <div class="card-panel">
                     <div class="card-panel-icon-wrapper icon-people">
                         <svg class="" style="width:35px;height:35px;">
@@ -102,8 +102,8 @@
                         </svg>
                     </div>
                     <div class="card-panel-description">
-                        <div class="card-panel-text">关于</div>
-                        <span>SQL Sugar ORM</span>
+                        <div class="card-panel-text">捐赠/关于</div>
+                        <span>如果该工具为你提供了便利, 可以适当给予捐赠</span>
                     </div>
                 </div>
             </el-col>
@@ -116,6 +116,16 @@
             <p style="font-size:12px;color:#666">请不要重复申请入群, 添加一个群即可, 留下位置给更多需要的人. </p>
         </div>
         <div id="particles-js"></div>
+        <el-dialog class="my-pay" :visible.sync="dialogVisible" :close-on-click-modal="false" top="20px" width="90%">
+            <div>
+                <p>如果该工具为你提供了便利, 您可以根据自己的经济情况, 给予适当的捐赠, 支持开发者的维护</p>
+                <p>本工具BUG反馈请加下面的三个群之一, 进行反馈</p>
+                <p>本工具Github地址: <el-tag type="success" onclick="qq.addedQun('https://github.com/q7164518/SqlSugar.Tools')">单击我查看</el-tag></p>
+            </div>
+            <div style="text-align:center">
+                <img src="../img/pay.png" style="height:388px" />
+            </div>
+        </el-dialog>
     </div>
 </body>
 </html>

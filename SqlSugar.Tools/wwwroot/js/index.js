@@ -1,8 +1,9 @@
-﻿new Vue({
+﻿const vue = new Vue({
     el: "#app",
     data() {
         return {
-            particlesJSSwitch: '1'
+            particlesJSSwitch: '1',
+            dialogVisible: false
         };
     },
     methods: {
@@ -134,3 +135,7 @@
         }
     }
 });
+
+function showPay() {
+    vue.dialogVisible = true;
+}

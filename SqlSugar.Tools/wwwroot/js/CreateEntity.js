@@ -9,7 +9,7 @@
         </el-tooltip>\
     </span>\
     <span>\
-        <el-tooltip class="item" effect="dark" :content="data.node.label" placement="right">\
+        <el-tooltip class="item" effect="dark" :content="data.node.label + \'单击预览, Ctrl + S可以保存\'" placement="right">\
             <span v-if="data.node.level === 1" style="font-size:14px;"><span style="padding:0px"></span>{{data.node.label}}</span>\
             <span v-else style="font-size:10px;" @click="$root.createOne(data.node, data.node.data)"><span style="padding:0px"></span>{{data.node.label}}</span>\
         </el-tooltip>\

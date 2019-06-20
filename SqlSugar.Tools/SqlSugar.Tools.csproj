@@ -635,6 +635,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="ico.ico" />
+    <EmbeddedResource Include="wwwroot\img\pay.png" />
     <EmbeddedResource Include="wwwroot\js\particles.js" />
     <EmbeddedResource Include="wwwroot\js\DBTypeMapping.js" />
     <EmbeddedResource Include="wwwroot\pages\DBTypeSetting.html" />
