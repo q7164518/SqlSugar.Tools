@@ -1279,7 +1279,7 @@ on
                     //var tableowner = linkString.Substring(linkString.IndexOf("Username=") + 9, linkString.IndexOf(";Password=") - linkString.IndexOf("Username=") - 9);
                     var sql2 = $@"SELECT
 	t2.tablename AS TableName,
-	CAST (obj_description(relfilenode, 'pg_class') AS VARCHAR) AS TableDesc 
+	CAST (obj_description(t1.oid, 'pg_class') AS VARCHAR) AS TableDesc 
 FROM
 	pg_class t1
 	LEFT JOIN pg_tables t2 ON t1.relname = t2.tablename 
