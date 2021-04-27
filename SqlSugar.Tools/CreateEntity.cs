@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Web;
 
 namespace SqlSugar.Tools
 {
@@ -148,6 +149,7 @@ namespace SqlSugar.Tools
                             .Replace("?.", "<span style=\"color:#E9D372\">?.</span>")
                             .Replace("default(", "<span style=\"color:#CE04B0\">default(</span>");
                         code = Regex.Replace(code, @"/// <summary>(?<str>.*?)/// </summary>", "<span style=\"color:green\">/// &lt;summary&gt;${str}/// &lt;/summary&gt;</span>");
+			code = HttpUtility.JavaScriptStringEncode(code);
                         EvaluateJavascript($"getEntityCode('{code}')", (value, exception) => { });
                     }
                     catch (Exception ex)
